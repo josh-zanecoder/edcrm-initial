@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Activity, ActivityType, ActivityStatus } from '@/types/activity';
+import { Activity, ActivityStatus } from '@/types/activity';
 import AddEditActivityModal from '@/components/salesperson/AddEditActivityModal';
 import { 
   CalendarIcon, 
@@ -49,7 +49,7 @@ export default function ActivitiesPage({ params }: PageProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
 
-  const fetchActivities = async () => {
+  const fetchActivities = React.useCallback(async () => {
     try {
       setError(null);
       setIsLoading(true);
@@ -67,13 +67,13 @@ export default function ActivitiesPage({ params }: PageProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     if (id) {
       fetchActivities();
     }
-  }, [id]);
+  }, [id, fetchActivities]);
 
   const handleAddActivity = async (activity: Omit<Activity, '_id' | 'createdAt' | 'updatedAt' | 'addedBy'>) => {
     try {
@@ -126,14 +126,12 @@ export default function ActivitiesPage({ params }: PageProps) {
   const handleEditActivity = async (activity: Omit<Activity, '_id' | 'createdAt' | 'updatedAt' | 'addedBy'>) => {
     if (!editingActivity) return;
     try {
-      const { prospectId: _prospectId, ...updateData } = activity;
-
       const response = await fetch(`/api/prospects/${id}/activities/${editingActivity._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...updateData,
-          dueDate: updateData.dueDate.toISOString()
+          ...activity,
+          dueDate: activity.dueDate.toISOString()
         }),
       });
 

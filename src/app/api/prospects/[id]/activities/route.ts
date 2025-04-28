@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
-import { Activity, ActivityType, ActivityStatus } from '@/types/activity';
+import { ActivityType, ActivityStatus } from '@/types/activity';
 
 const getCookies = async () => {
   const cookieStore = await cookies();

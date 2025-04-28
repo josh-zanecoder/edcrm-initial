@@ -36,7 +36,7 @@ export default function MembersPage({ params }: PageProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
 
-  const fetchMembers = async () => {
+  const fetchMembers = React.useCallback(async () => {
     try {
       setError(null);
       setIsLoading(true);
@@ -63,13 +63,13 @@ export default function MembersPage({ params }: PageProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     if (id) {
       fetchMembers();
     }
-  }, [id]);
+  }, [id, fetchMembers]);
 
   const handleAddMember = async (member: Omit<Member, '_id' | 'createdAt' | 'updatedAt' | 'addedBy'>) => {
     try {
@@ -121,19 +121,10 @@ export default function MembersPage({ params }: PageProps) {
   const handleEditMember = async (member: Omit<Member, '_id' | 'createdAt' | 'updatedAt' | 'addedBy'>) => {
     if (!editingMember) return;
     try {
-      // Remove prospectId and collegeName from the update data
-      const { prospectId: _prospectId, collegeName: _collegeName, ...updateData } = member;
-
-      console.log('Editing member:', {
-        memberId: editingMember._id,
-        prospectId: id,
-        updateData
-      });
-
       const response = await fetch(`/api/prospects/${id}/members/${editingMember._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateData),
+        body: JSON.stringify(member),
       });
 
       const responseData = await response.json();

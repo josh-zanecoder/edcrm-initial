@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Reminder, ReminderType, ReminderStatus } from '@/types/reminder';
+import { Reminder, ReminderStatus } from '@/types/reminder';
 import AddEditReminderModal from '@/components/salesperson/AddEditReminderModal';
 import { 
   BellIcon, 
@@ -47,7 +47,7 @@ export default function RemindersPage({ params }: PageProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
 
-  const fetchReminders = async () => {
+  const fetchReminders = React.useCallback(async () => {
     try {
       setError(null);
       setIsLoading(true);
@@ -65,13 +65,13 @@ export default function RemindersPage({ params }: PageProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     if (id) {
       fetchReminders();
     }
-  }, [id]);
+  }, [id, fetchReminders]);
 
   const handleAddReminder = async (reminder: Omit<Reminder, '_id' | 'createdAt' | 'updatedAt' | 'addedBy'>) => {
     try {
@@ -124,14 +124,12 @@ export default function RemindersPage({ params }: PageProps) {
   const handleEditReminder = async (reminder: Omit<Reminder, '_id' | 'createdAt' | 'updatedAt' | 'addedBy'>) => {
     if (!editingReminder) return;
     try {
-      const { prospectId: _prospectId, ...updateData } = reminder;
-
       const response = await fetch(`/api/prospects/${id}/reminders/${editingReminder._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...updateData,
-          dueDate: updateData.dueDate.toISOString()
+          ...reminder,
+          dueDate: reminder.dueDate.toISOString()
         }),
       });
 

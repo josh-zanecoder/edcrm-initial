@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthState, AuthContextType, LoginCredentials } from '@/types/auth';
+import { auth } from '@/lib/firebase';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -117,6 +118,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // If token is expired, try to refresh it
+        if (errorData.error === 'Token has expired') {
+          // Get a new token from Firebase
+          const newToken = await auth.currentUser?.getIdToken(true);
+          if (newToken) {
+            // Update the token in cookies
+            document.cookie = `token=${newToken}; path=/; max-age=86400; SameSite=Strict`;
+            
+            // Retry verification with new token
+            const retryResponse = await fetch('/api/auth/verify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ token: newToken, user }),
+            });
+
+            if (!retryResponse.ok) {
+              throw new Error('Failed to refresh token');
+            }
+
+            const retryData = await retryResponse.json();
+            return retryData.user;
+          }
+        }
+        
         throw new Error(errorData.error || 'Session invalid');
       }
 

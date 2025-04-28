@@ -1,33 +1,13 @@
 'use client';
 
-import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+
 
 export default function AdminDashboard() {
   const { user, isLoading } = useAuth();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    status: 'active'
-  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      // TODO: Implement API call to add salesperson
-      console.log('Adding salesperson:', formData);
-      setFormData({ name: '', email: '', phone: '', status: 'active' });
-    } catch (error) {
-      console.error('Error adding salesperson:', error);
-    }
-  };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  
 
   if (isLoading) {
     return (

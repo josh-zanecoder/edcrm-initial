@@ -29,6 +29,7 @@ export function middleware(request: NextRequest) {
 
     return NextResponse.next();
   } catch (error) {
+    console.error('Error parsing user data:', error);
     // If there's an error parsing the user data, redirect to login
     return NextResponse.redirect(new URL('/login', request.url));
   }
