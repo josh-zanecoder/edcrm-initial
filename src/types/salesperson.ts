@@ -16,8 +16,9 @@ export interface CreateSalespersonInput {
   phone: string;
   password: string;
   role: 'salesperson';
+  twilio_number?: string; // Add this new field
 }
 
 export interface UpdateSalespersonInput extends Partial<CreateSalespersonInput> {
   status?: 'active' | 'inactive';
-} 
+}

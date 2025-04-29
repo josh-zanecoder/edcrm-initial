@@ -17,6 +17,7 @@ export default function AddSalespersonModal({ isOpen, onClose, onSalespersonAdde
     phone: '',
     password: 'Default@123',
     role: 'salesperson',
+    twilio_number: '', // Add this field
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -245,6 +246,25 @@ export default function AddSalespersonModal({ isOpen, onClose, onSalespersonAdde
                       )}
                     </div>
 
+                    {/* Add this new field before the note about default password */}
+                    <div>
+                      <label htmlFor="twilio_number" className="block text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
+                        Twilio Number (Optional)
+                      </label>
+                      <input
+                        type="tel"
+                        id="twilio_number"
+                        name="twilio_number"
+                        value={formData.twilio_number}
+                        onChange={handleChange}
+                        className="block w-full rounded-md border-2 border-gray-300 shadow-sm text-sm sm:text-base transition-colors duration-200 px-3 py-2.5 sm:px-4 sm:py-3 placeholder:text-gray-400 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+                        placeholder="Enter Twilio number"
+                      />
+                      <p className="mt-1 text-sm text-gray-500">
+                        Format: +1XXXXXXXXXX (include country code)
+                      </p>
+                    </div>
+
                     <div className="mt-4 p-4 bg-blue-50 rounded-md">
                       <p className="text-sm text-blue-700">
                         <span className="font-semibold">Note:</span> New salespersons will receive a default password of <code className="bg-blue-100 px-1 py-0.5 rounded">Default@123</code>. They should use this password for their first login.
@@ -286,4 +306,4 @@ export default function AddSalespersonModal({ isOpen, onClose, onSalespersonAdde
       </div>
     </div>
   );
-} 
+}

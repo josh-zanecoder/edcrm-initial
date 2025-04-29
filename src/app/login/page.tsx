@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
 
@@ -20,17 +22,73 @@ export default function LoginPage() {
 
     try {
       await login({ email, password });
-      router.push('/admin');
-    } catch (err) {
-      setError('Invalid email or password');
-      console.error('Login error:', err);
+      toast.success('Login successful! Redirecting...');
+    } catch (err: any) {
+      let errorMessage = 'Invalid email or password';
+      
+      // Handle specific Firebase error codes
+      if (err.message) {
+        if (err.message.includes('auth/too-many-requests')) {
+          errorMessage = 'Too many failed attempts. Please try again later';
+        } else if (err.message.includes('auth/user-not-found')) {
+          errorMessage = 'No account found with this email';
+        } else if (err.message.includes('auth/wrong-password')) {
+          errorMessage = 'Incorrect password';
+        } else if (err.message.includes('auth/network-request-failed')) {
+          errorMessage = 'Network error. Please check your connection';
+        } else if (err.message.includes('User not authorized')) {
+          errorMessage = 'User not authorized. Please contact administrator.';
+        } else if (err.message.includes('Email and password are required')) {
+          errorMessage = 'Email and password are required';
+        }
+      }
+      
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleResetPassword = async () => {
+    if (!email) {
+      toast.error('Please enter your email address');
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to send reset email');
+        } else {
+          throw new Error('Server error occurred');
+        }
+      }
+
+      const data = await response.json();
+      toast.success('Password reset email sent! Please check your inbox.');
+    } catch (err: any) {
+      console.error('Reset password error:', err);
+      toast.error(err.message || 'Failed to send reset email');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden px-4 sm:px-6 lg:px-8">
+    <div className={`min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden px-4 sm:px-6 lg:px-8 transition-all duration-300 ${isLoading ? 'blur-sm' : ''}`}>
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
@@ -160,9 +218,24 @@ export default function LoginPage() {
           </div>
 
           <div className="text-center text-sm text-gray-500">
-            <a href="#" className="hover:text-blue-600 transition-colors duration-200">
-              Forgot your password?
-            </a>
+            <button
+              type="button"
+              onClick={handleResetPassword}
+              disabled={isResetting}
+              className="hover:text-blue-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isResetting ? (
+                <div className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Sending reset email...
+                </div>
+              ) : (
+                'Forgot your password?'
+              )}
+            </button>
           </div>
         </form>
       </div>

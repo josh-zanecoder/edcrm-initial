@@ -13,7 +13,7 @@ const auth = getAuth(app);
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { first_name, last_name, email, phone, password } = body as CreateSalespersonInput & { password: string };
+    const { first_name, last_name, email, phone, password, twilio_number } = body as CreateSalespersonInput & { password: string };
 
     // Validate required fields
     if (!first_name || !last_name || !email || !phone || !password) {
@@ -77,6 +77,7 @@ export async function POST(request: Request) {
       last_name,
       email,
       phone,
+      twilio_number: twilio_number || null, // Add this field
       firebase_uid: firebaseUser.uid,
       status: 'active',
       role: 'salesperson',
@@ -117,4 +118,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-} 
+}

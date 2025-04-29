@@ -27,12 +27,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify(credentials),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Authentication failed');
-      }
-
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Unable to sign in. Please check your credentials and try again.');
+      }
 
       if (!data.user) {
         throw new Error('Invalid response format');
@@ -47,26 +46,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         redirectTo: data.user.redirectTo,
       };
 
-      // Set state before navigation
+      // Store user data and token in cookies
+      document.cookie = `user=${JSON.stringify(userData)}; path=/; max-age=86400; SameSite=Strict`; // 24 hours
+      document.cookie = `token=${data.user.token}; path=/; max-age=86400; SameSite=Strict`; // 24 hours
+
+      // Set state and navigate
       setAuthState({
         user: userData,
         isLoading: false,
         error: null,
       });
 
-      // Store user data and token in cookies
-      document.cookie = `user=${JSON.stringify(userData)}; path=/; max-age=86400; SameSite=Strict`; // 24 hours
-      document.cookie = `token=${data.user.token}; path=/; max-age=86400; SameSite=Strict`; // 24 hours
-      
-      // Use setTimeout to ensure state is updated before navigation
-      setTimeout(() => {
-        router.push(data.user.redirectTo);
-      }, 100);
+      router.push(data.user.redirectTo);
     } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unable to sign in. Please try again.';
       setAuthState({
         user: null,
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to login',
+        error: errorMessage,
       });
       throw error;
     }
@@ -179,13 +176,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isLoading: false,
             error: null,
           });
+          // Only redirect if we're on the login page
+          if (window.location.pathname === '/login') {
+            router.push(verifiedUser.redirectTo);
+          }
         } else if (isMounted) {
           setAuthState({
             user: null,
             isLoading: false,
             error: null,
           });
-          router.push('/login');
+          // Only redirect to login if we're not already there
+          if (window.location.pathname !== '/login') {
+            router.push('/login');
+          }
         }
       } catch (error) {
         if (isMounted) {
@@ -194,7 +198,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isLoading: false,
             error: error instanceof Error ? error.message : 'Failed to restore session',
           });
-          router.push('/login');
+          // Only redirect to login if we're not already there
+          if (window.location.pathname !== '/login') {
+            router.push('/login');
+          }
         }
       }
     };
@@ -206,7 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [verifySession, router]);
 
-  // Prevent flash of loading state
+  // Show loading spinner while checking auth state
   if (authState.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
