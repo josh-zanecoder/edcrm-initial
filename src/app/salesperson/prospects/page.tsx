@@ -107,7 +107,7 @@ export default function ProspectsPage() {
     setCurrentProspect(prospect);
     makeCall({
       To: `+1${unformatPhoneNumber(prospect.phone)}`,
-      CallerId: "+16196044956",
+      CallerId: `+1${unformatPhoneNumber(user?.twilio_number || '')}`,
       UserId: user?.uid ?? '',
       ProspectId: prospect.id,
     });

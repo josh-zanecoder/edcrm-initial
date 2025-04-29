@@ -86,27 +86,47 @@ export default function Dialer({ initialPhoneNumber, callerName }: DialerProps) 
 
       {/* Keypad */}
       <div className="grid grid-cols-3 gap-6 px-6 py-4">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 'home', 0, 'back'].map((digit) => (
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
           <button
             key={digit}
-            onClick={() => typeof digit === 'number' && handleNumberClick(digit.toString())}
+            onClick={() => handleNumberClick(digit.toString())}
             className="h-[64px] w-[64px] mx-auto flex items-center justify-center rounded-full
               bg-[#2C3440] hover:bg-[#374151] active:bg-[#4B5563]
               transition-all duration-150"
           >
-            {digit === 'home' ? (
-              <HomeIcon className="h-6 w-6 text-white" />
-            ) : digit === 'back' ? (
-              <div className="rotate-135">
-                <PhoneIcon className="h-6 w-6 text-white" />
-              </div>
-            ) : (
-              <span className="text-[28px] text-white font-normal">
-                {digit}
-              </span>
-            )}
+            <span className="text-[28px] text-white font-normal">
+              {digit}
+            </span>
           </button>
         ))}
+        <button
+          onClick={() => {}}
+          className="h-[64px] w-[64px] mx-auto flex items-center justify-center rounded-full
+            bg-[#2C3440] hover:bg-[#374151] active:bg-[#4B5563]
+            transition-all duration-150"
+        >
+          <HomeIcon className="h-6 w-6 text-white" />
+        </button>
+        <button
+          onClick={() => handleNumberClick('0')}
+          className="h-[64px] w-[64px] mx-auto flex items-center justify-center rounded-full
+            bg-[#2C3440] hover:bg-[#374151] active:bg-[#4B5563]
+            transition-all duration-150"
+        >
+          <span className="text-[28px] text-white font-normal">
+            0
+          </span>
+        </button>
+        <button
+          onClick={() => handleNumberClick('*')}
+          className="h-[64px] w-[64px] mx-auto flex items-center justify-center rounded-full
+            bg-[#2C3440] hover:bg-[#374151] active:bg-[#4B5563]
+            transition-all duration-150"
+        >
+          <span className="text-[28px] text-white font-normal">
+            *
+          </span>
+        </button>
       </div>
 
       {/* Call Button */}
