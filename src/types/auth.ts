@@ -5,6 +5,7 @@ export interface User {
   token: string;
   role: 'admin' | 'salesperson';
   redirectTo: string;
+  twilio_number?: string | null;
 }
 
 export interface AuthState {
