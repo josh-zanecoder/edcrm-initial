@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from '@/contexts/AuthContext';
+import { Toaster } from 'react-hot-toast';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,15 +21,56 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <AuthProvider>{children}</AuthProvider>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className="min-h-screen bg-gray-50">
+        <AuthProvider>
+          <div className="min-h-screen">
+            {children}
+          </div>
+          <Toaster 
+            position="top-center"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: 'rgba(255, 255, 255, 0.8)',
+                backdropFilter: 'blur(8px)',
+                color: '#1F2937',
+                padding: '16px',
+                borderRadius: '12px',
+                boxShadow: '0 8px 16px rgba(0, 0, 0, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.5)',
+              },
+              success: {
+                style: {
+                  background: 'rgba(16, 185, 129, 0.9)',
+                  backdropFilter: 'blur(8px)',
+                  color: '#fff',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                },
+                iconTheme: {
+                  primary: '#fff',
+                  secondary: 'rgba(16, 185, 129, 0.9)',
+                },
+              },
+              error: {
+                style: {
+                  background: 'rgba(239, 68, 68, 0.9)',
+                  backdropFilter: 'blur(8px)',
+                  color: '#fff',
+                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                },
+                iconTheme: {
+                  primary: '#fff',
+                  secondary: 'rgba(239, 68, 68, 0.9)',
+                },
+              },
+            }}
+          />
+        </AuthProvider>
       </body>
     </html>
   );

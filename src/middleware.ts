@@ -2,43 +2,49 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  const user = request.cookies.get('user')?.value;
-  const token = request.cookies.get('token')?.value;
+  const userCookie = request.cookies.get('user');
+  const tokenCookie = request.cookies.get('token');
+  const { pathname } = request.nextUrl;
 
-  // If no user or token, redirect to login
-  if (!user || !token) {
-    if (request.nextUrl.pathname.startsWith('/login')) {
-      return NextResponse.next();
-    }
-    return NextResponse.redirect(new URL('/login', request.url));
+  // Public paths that don't require authentication
+  const publicPaths = ['/login', '/api/auth/login', '/api/auth/verify'];
+  if (publicPaths.includes(pathname)) {
+    return NextResponse.next();
   }
 
-  try {
-    const userData = JSON.parse(user);
-    const { role } = userData;
+  // If no auth cookies and not on a public path, redirect to login
+  if (!userCookie || !tokenCookie) {
+    const url = new URL('/login', request.url);
+    url.searchParams.set('from', pathname);
+    return NextResponse.redirect(url);
+  }
 
-    // If user is a salesperson trying to access admin routes
-    if (role === 'salesperson' && request.nextUrl.pathname.startsWith('/admin')) {
+  // If authenticated, prevent access to login page
+  if (pathname === '/login' && userCookie && tokenCookie) {
+    const user = JSON.parse(userCookie.value);
+    return NextResponse.redirect(new URL(user.redirectTo, request.url));
+  }
+
+  // Role-based access control
+  if (userCookie && tokenCookie) {
+    const user = JSON.parse(userCookie.value);
+    
+    // Admin routes protection
+    if (pathname.startsWith('/admin') && user.role !== 'admin') {
       return NextResponse.redirect(new URL('/salesperson', request.url));
     }
 
-    // If user is an admin trying to access salesperson routes
-    if (role === 'admin' && request.nextUrl.pathname.startsWith('/salesperson')) {
+    // Salesperson routes protection
+    if (pathname.startsWith('/salesperson') && user.role !== 'salesperson') {
       return NextResponse.redirect(new URL('/admin', request.url));
     }
-
-    return NextResponse.next();
-  } catch (error) {
-    console.error('Error parsing user data:', error);
-    // If there's an error parsing the user data, redirect to login
-    return NextResponse.redirect(new URL('/login', request.url));
   }
+
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    '/admin/:path*',
-    '/salesperson/:path*',
-    '/login',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
-}; 
+};

@@ -3,6 +3,7 @@ export interface User {
   email: string | null;
   displayName: string | null;
   token: string;
+  twilioNumber: string | null;
   role: 'admin' | 'salesperson';
   redirectTo: string;
 }

@@ -14,7 +14,8 @@ const prospectSchema = new mongoose.Schema({
   },
   phone: { 
     type: String, 
-    required: true 
+    required: true,
+    match: [/^\+?[\d\s-()]{10,}$/, 'Please enter a valid phone number with at least 10 digits'] 
   },
   email: { 
     type: String, 

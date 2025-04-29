@@ -9,7 +9,7 @@ export async function POST(request: Request) {
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        { error: 'Email and password are required', code: 'missing-credentials' },
         { status: 400 }
       );
     }
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       // If user doesn't exist in MongoDB, deny access
       if (!userRecord) {
         return NextResponse.json(
-          { error: 'User not authorized. Please contact administrator.' },
+          { error: 'User not authorized. Please contact administrator.', code: 'unauthorized' },
           { status: 403 }
         );
       }
@@ -50,6 +50,7 @@ export async function POST(request: Request) {
         role: userRecord.role,
         firstName: salesperson?.first_name,
         lastName: salesperson?.last_name,
+        twilioNumber: salesperson?.twilio_number || null,  // Add the Twilio number
         redirectTo: userRecord.role === 'admin' ? '/admin' : '/salesperson'
       };
 
@@ -57,17 +58,18 @@ export async function POST(request: Request) {
         user: session,
         message: 'Login successful'
       });
-    } catch (firebaseError: unknown) {
-      console.error('Firebase authentication error:', firebaseError);
+    } catch (firebaseError: any) {
       return NextResponse.json(
-        { error: (firebaseError as Error).message || 'Authentication failed' },
+        { 
+          error: firebaseError.message || 'Authentication failed',
+          code: firebaseError.code || 'auth/unknown-error'
+        },
         { status: 401 }
       );
     }
   } catch (error: unknown) {
-    console.error('Login error:', error);
     return NextResponse.json(
-      { error: 'Invalid request format' },
+      { error: 'Invalid request format', code: 'invalid-request' },
       { status: 400 }
     );
   }
