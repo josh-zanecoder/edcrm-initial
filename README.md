@@ -20,6 +20,37 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Using ngrok for Twilio Webhooks
+
+This project includes ngrok for exposing your local server to the internet, which is necessary for Twilio to reach your webhook endpoints.
+
+To start the development server with ngrok tunneling:
+
+```bash
+npm run tunnel
+# or
+yarn tunnel
+# or
+pnpm tunnel
+# or
+bun tunnel
+```
+
+This will start your Next.js server and create an ngrok tunnel. The console will display the public URL that you can use for your Twilio webhook configuration.
+
+For example, if the ngrok URL is `https://abc123.ngrok.io`, your Twilio voice webhook URL would be:
+`https://abc123.ngrok.io/api/twilio/voice`
+
+### Optional: Using an ngrok Auth Token
+
+If you have an ngrok account, you can add your auth token to the `.env` file:
+
+```
+NGROK_AUTH_TOKEN=your_ngrok_auth_token
+```
+
+This will give you more features like custom subdomains and longer tunnel sessions.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
