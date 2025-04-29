@@ -50,6 +50,7 @@ export async function POST(request: Request) {
         role: userRecord.role,
         firstName: salesperson?.first_name,
         lastName: salesperson?.last_name,
+        twilioNumber: salesperson?.twilio_number || null,  // Add the Twilio number
         redirectTo: userRecord.role === 'admin' ? '/admin' : '/salesperson'
       };
 

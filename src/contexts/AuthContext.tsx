@@ -43,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         displayName: data.user.displayName,
         token: data.user.token,
         role: data.user.role,
+        twilioNumber: data.user.twilioNumber,
         redirectTo: data.user.redirectTo,
       };
 
