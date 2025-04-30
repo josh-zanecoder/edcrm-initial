@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
-
-// Utility function to remove formatting from phone numbers
-const unformatPhoneNumber = (phone: string) => {
-  return phone.replace(/[^\d+]/g, '');
-};
+import { unformatPhoneNumber } from '@/utils/formatters';
 
 const getCookies = async () => {
   const cookieStore = await cookies();
