@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Prospect, CollegeType } from '@/types/prospect';
-import { formatAddress } from '@/utils/formatters';
+import { formatAddress, formatPhoneNumber } from '@/utils/formatters';
 import { useRouter } from 'next/navigation';
 import { 
   PhoneIcon, 
@@ -14,6 +14,7 @@ import {
   CheckCircleIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
 
 const STATUS_OPTIONS = [
   'New',
@@ -39,12 +40,11 @@ export default function ProspectDetailsPage({ params }: PageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedProspect, setEditedProspect] = useState<Prospect | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProspect = async () => {
       if (!id) {
-        setError('Invalid prospect ID');
+        toast.error('Invalid prospect ID');
         setIsLoading(false);
         return;
       }
@@ -66,10 +66,9 @@ export default function ProspectDetailsPage({ params }: PageProps) {
         const data = await response.json();
         setProspect(data);
         setEditedProspect(data);
-        setError(null);
       } catch (error) {
         console.error('Error fetching prospect:', error);
-        setError(error instanceof Error ? error.message : 'Failed to fetch prospect');
+        toast.error(error instanceof Error ? error.message : 'Failed to fetch prospect');
         setProspect(null);
         setEditedProspect(null);
       } finally {
@@ -92,44 +91,18 @@ export default function ProspectDetailsPage({ params }: PageProps) {
     setEditedProspect(prospect);
   };
 
-  const handleSave = async () => {
-    if (!prospect) return;
-    try {
-      setIsSaving(true);
-      const response = await fetch(`/api/prospects/${id}/details`, {
-        method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(editedProspect),
-      });
-
-      if (response.status === 401) {
-        router.push('/login');
-        return;
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update prospect');
-      }
-
-      const updatedProspect = await response.json();
-      setProspect(updatedProspect);
-      setEditedProspect(updatedProspect);
-      setIsEditing(false);
-      setError(null);
-    } catch (error) {
-      console.error('Error updating prospect:', error);
-      setError(error instanceof Error ? error.message : 'Failed to update prospect');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
+ 
   const handleChange = (field: string, value: string) => {
     if (!editedProspect) return;
+    
+    if (field === 'phone') {
+      const formattedPhone = formatPhoneNumber(value);
+      setEditedProspect({
+        ...editedProspect,
+        [field]: formattedPhone
+      });
+      return;
+    }
     
     if (field.startsWith('address.')) {
       const addressField = field.split('.')[1];
@@ -158,23 +131,57 @@ export default function ProspectDetailsPage({ params }: PageProps) {
     });
   };
 
+  const isValidPhoneNumber = (phone: string): boolean => {
+    const phoneRegex = /^\(\d{3}\) \d{3}-\d{4}$/;
+    return phoneRegex.test(phone);
+  };
+
+  const handleSave = async () => {
+    if (!prospect || !editedProspect) return;
+
+    if (!isValidPhoneNumber(editedProspect.phone)) {
+      toast.error('Please enter a valid phone number in format (XXX) XXX-XXXX');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const response = await fetch(`/api/prospects/${id}/details`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editedProspect),
+      });
+
+      if (response.status === 401) {
+        router.push('/login');
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update prospect');
+      }
+
+      const updatedProspect = await response.json();
+      setProspect(updatedProspect);
+      setEditedProspect(updatedProspect);
+      setIsEditing(false);
+      toast.success('Prospect updated successfully');
+    } catch (error) {
+      console.error('Error updating prospect:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to update prospect');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg">
-          <div className="flex">
-            <XCircleIcon className="h-5 w-5 text-red-400" />
-            <p className="ml-3 text-sm text-red-700">{error}</p>
-          </div>
-        </div>
       </div>
     );
   }
@@ -254,17 +261,23 @@ export default function ProspectDetailsPage({ params }: PageProps) {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone</label>
               {isEditing ? (
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <PhoneIcon className="h-5 w-5 text-gray-400" />
+                <div className="space-y-2">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <PhoneIcon className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="tel"
+                      value={editedProspect.phone}
+                      onChange={(e) => handleChange('phone', e.target.value)}
+                      className="w-full pl-11 pr-4 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      placeholder="(XXX) XXX-XXXX"
+                      maxLength={14}
+                    />
                   </div>
-                  <input
-                    type="tel"
-                    value={editedProspect.phone}
-                    onChange={(e) => handleChange('phone', e.target.value)}
-                    className="w-full pl-11 pr-4 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    placeholder="(XXX) XXX-XXXX"
-                  />
+                  <p className="text-sm text-gray-500 ml-1">
+                    Please enter phone number in format: (XXX) XXX-XXXX
+                  </p>
                 </div>
               ) : (
                 <div className="flex items-center">
@@ -484,4 +497,4 @@ export default function ProspectDetailsPage({ params }: PageProps) {
       </div>
     </div>
   );
-} 
+}

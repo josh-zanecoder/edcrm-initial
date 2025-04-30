@@ -49,6 +49,7 @@ export async function POST(request: Request) {
         token: token,
         role: userRecord.role,
         firstName: salesperson?.first_name,
+        twilioNumber: salesperson?.twilio_number || null,
         lastName: salesperson?.last_name,
         redirectTo: userRecord.role === 'admin' ? '/admin' : '/salesperson'
       };

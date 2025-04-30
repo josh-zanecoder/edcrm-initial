@@ -23,6 +23,7 @@
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
     "twilio": "^5.5.2",
+    "use-debounce": "^10.0.4",
     "zod": "^3.24.3",
     "zustand": "^5.0.3"
   },

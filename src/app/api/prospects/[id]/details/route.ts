@@ -3,6 +3,11 @@ import { cookies } from 'next/headers';
 import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 
+// Utility function to remove formatting from phone numbers
+const unformatPhoneNumber = (phone: string) => {
+  return phone.replace(/[^\d+]/g, '');
+};
+
 const getCookies = async () => {
   const cookieStore = await cookies();
   return {
@@ -80,6 +85,11 @@ export async function PUT(
     const updatedData = await request.json();
     console.log('Received update data:', updatedData);
 
+    // Format phone number before validation
+    if (updatedData.phone) {
+      updatedData.phone = unformatPhoneNumber(updatedData.phone);
+    }
+
     // Validate required fields
     const {
       collegeName,
@@ -93,20 +103,12 @@ export async function PUT(
       status
     } = updatedData;
 
-    if (!collegeName || !phone || !email || !address || !county || !website || !collegeTypes) {
-      console.error('Missing required fields:', {
-        collegeName: !collegeName,
-        phone: !phone,
-        email: !email,
-        address: !address,
-        county: !county,
-        website: !website,
-        collegeTypes: !collegeTypes
-      });
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+    // Add phone validation
+    if (phone && phone.length < 10) {
+      return NextResponse.json({
+        error: 'Validation Error',
+        details: 'Phone number must be at least 10 digits'
+      }, { status: 400 });
     }
 
     // Validate address
@@ -166,13 +168,13 @@ export async function PUT(
 
     console.log('Updating prospect with user info:', userInfo);
 
-    // Update prospect
+    // Update prospect with unformatted phone
     const updateResult = await prospectsCollection.updateOne(
       { _id: new ObjectId(id) },
       {
         $set: {
           collegeName,
-          phone,
+          phone, // Phone is already unformatted
           email,
           address,
           county,
@@ -220,4 +222,4 @@ export async function PUT(
       { status: 500 }
     );
   }
-} 
+}

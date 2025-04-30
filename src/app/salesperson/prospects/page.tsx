@@ -2,12 +2,14 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Prospect } from '@/types/prospect';
 import AddProspectModal from '@/components/salesperson/AddProspectModal';
-import { formatAddress } from '@/utils/formatters';
+import { formatAddress, formatWebsite } from '@/utils/formatters';
 import { useCallStore } from '@/store/useCallStore';
 import Dialer from '@/components/salesperson/Dialer';
+import { useDebouncedCallback } from 'use-debounce';
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 // Utility function to remove special characters from phone number
 const unformatPhoneNumber = (phone: string) => {
@@ -15,6 +17,7 @@ const unformatPhoneNumber = (phone: string) => {
 };
 
 export default function ProspectsPage() {
+  // Move all hooks to the top, before any conditional logic
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [prospects, setProspects] = useState<Prospect[]>([]);
@@ -23,10 +26,24 @@ export default function ProspectsPage() {
   const { initDevice, makeCall, isCalling } = useCallStore();
   const [twilioError, setTwilioError] = useState<string | null>(null);
   const [currentProspect, setCurrentProspect] = useState<Prospect | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
+  // Define callbacks using useCallback
+  const handleRowClick = useCallback((prospectId: string) => {
+    router.push(`/salesperson/prospects/${prospectId}/details`);
+  }, [router]);
+
+  const debouncedSearch = useDebouncedCallback((query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+  }, 300);
+
+  // Move all useEffects here
   useEffect(() => {
-    // Debug alert on page initialization
-    
     if (!isLoading && (!user || user.role !== 'salesperson')) {
       router.push('/login');
     }
@@ -35,12 +52,24 @@ export default function ProspectsPage() {
   useEffect(() => {
     const fetchProspects = async () => {
       try {
-        const response = await fetch('/api/prospects');
+        setIsLoadingProspects(true);
+        const searchParams = new URLSearchParams({
+          page: currentPage.toString(),
+          limit: '5',
+        });
+
+        if (searchQuery) {
+          searchParams.append('search', searchQuery);
+        }
+
+        const response = await fetch(`/api/prospects?${searchParams.toString()}`);
         if (!response.ok) {
           throw new Error('Failed to fetch prospects');
         }
         const data = await response.json();
-        setProspects(data);
+        setProspects(data.prospects);
+        setTotalPages(data.totalPages);
+        setTotalCount(data.totalCount);
       } catch (error) {
         console.error('Error fetching prospects:', error);
       } finally {
@@ -51,7 +80,7 @@ export default function ProspectsPage() {
     if (user) {
       fetchProspects();
     }
-  }, [user]);
+  }, [user, currentPage, searchQuery]);
 
   useEffect(() => {
     const fetchToken = async () => {
@@ -113,6 +142,7 @@ export default function ProspectsPage() {
     });
   };
 
+  // Render loading state
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -121,6 +151,7 @@ export default function ProspectsPage() {
     );
   }
 
+  // Render null state
   if (!user) {
     return null;
   }
@@ -157,6 +188,26 @@ export default function ProspectsPage() {
           </svg>
           Add Prospect
         </button>
+      </div>
+
+      {/* Search Input */}
+      <div className="relative">
+        <div className="relative">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+          </div>
+          <input
+            type="text"
+            className="block w-full rounded-lg border border-gray-200 py-2.5 pl-10 pr-3 text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 sm:text-sm"
+            placeholder="Search prospects by name, email, phone, or location..."
+            onChange={(e) => debouncedSearch(e.target.value)}
+          />
+        </div>
+        {isSearching && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
+          </div>
+        )}
       </div>
 
       {twilioError && (
@@ -218,67 +269,103 @@ export default function ProspectsPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {prospects.map((prospect) => (
-                    <tr key={prospect.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                    <tr 
+                      key={prospect.id} 
+                      className="hover:bg-gray-50 cursor-pointer"
+                    >
+                      <td 
+                        className="px-6 py-4 whitespace-nowrap group"
+                        onClick={() => handleRowClick(prospect.id)}
+                      >
                         <div className="text-sm font-medium text-gray-900">
-                          <button
-                            onClick={() => router.push(`/salesperson/prospects/${prospect.id}/details`)}
-                            className="text-left hover:text-blue-600"
-                          >
-                            {prospect.collegeName}
-                          </button>
+                          {prospect.collegeName}
                         </div>
                         <div className="text-sm text-gray-500">{prospect.email}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td 
+                        className="px-6 py-4 whitespace-nowrap"
+                        onClick={() => handleRowClick(prospect.id)}
+                      >
                         <div className="text-sm text-gray-900">{prospect.collegeTypes.join(', ')}</div>
                       </td>
+                      {/* Phone number cell - keep separate for calling functionality */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button 
-                          className="text-sm text-gray-900 hover:text-blue-600"
-                          onClick={() => handleMakeCall(prospect)}
+                          className="text-sm cursor-pointer text-gray-900 hover:text-blue-600 focus:outline-none"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMakeCall(prospect);
+                          }}
                           disabled={isCalling}
                         >
                           {unformatPhoneNumber(prospect.phone)}
                         </button>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td 
+                        className="px-6 py-4 whitespace-nowrap"
+                        onClick={() => handleRowClick(prospect.id)}
+                      >
                         <div className="text-sm text-gray-900">{formatAddress(prospect.address)}</div>
                         <div className="text-sm text-gray-500">{prospect.county} County</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td 
+                        className="px-6 py-4 whitespace-nowrap"
+                        onClick={() => handleRowClick(prospect.id)}
+                      >
                         <a 
                           href={prospect.website} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="text-blue-600 hover:text-blue-900 text-sm"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          {prospect.website}
+                          {formatWebsite(prospect.website)}
                         </a>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td 
+                        className="px-6 py-4 whitespace-nowrap"
+                        onClick={() => handleRowClick(prospect.id)}
+                      >
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           prospect.bppeApproved ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                         }`}>
                           {prospect.bppeApproved ? 'Approved' : 'Not Approved'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td 
+                        className="px-6 py-4 whitespace-nowrap"
+                        onClick={() => handleRowClick(prospect.id)}
+                      >
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(prospect.status)}`}>
                           {prospect.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                                              <div className="text-sm text-gray-500">{prospect.assignedTo.email}</div>
+                      <td 
+                        className="px-6 py-4 whitespace-nowrap"
+                        onClick={() => handleRowClick(prospect.id)}
+                      >
+                        <div className="text-sm text-gray-500">{prospect.assignedTo.email}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td 
+                        className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                        onClick={() => handleRowClick(prospect.id)}
+                      >
                         {new Date(prospect.lastContact).toLocaleDateString()}
                       </td>
-                    
                     </tr>
                   ))}
                 </tbody>
+                
               </table>
+              {!isLoadingProspects && prospects.length === 0 && (
+        <div className="text-center py-12">
+          <MagnifyingGlassIcon className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-semibold text-gray-900">No prospects found</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Try adjusting your search terms or clear the search to see all prospects.
+          </p>
+        </div>
+      )}
             </div>
           </div>
 
@@ -329,9 +416,17 @@ export default function ProspectsPage() {
                   </div>
                   <div className="flex items-center text-sm">
                     <svg className="h-4 w-4 text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 009-9" />
                     </svg>
-                    {prospect.website}
+                    <a 
+                      href={prospect.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-900"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {formatWebsite(prospect.website)}
+                    </a>
                   </div>
                   <div className="flex items-center text-sm">
                     <svg className="h-4 w-4 text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -380,6 +475,86 @@ export default function ProspectsPage() {
           <Dialer callerName={currentProspect?.collegeName || "Unknown Prospect"} />
         </div>
       )}
+
+      {/* Pagination */}
+      <div className="mt-6 flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+        <div className="flex flex-1 justify-between sm:hidden">
+          <button
+            onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
+            disabled={currentPage === 1}
+            className={`relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium ${
+              currentPage === 1 
+                ? 'text-gray-400 cursor-not-allowed' 
+                : 'text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            Previous
+          </button>
+          <button
+            onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+            disabled={currentPage === totalPages}
+            className={`relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium ${
+              currentPage === totalPages 
+                ? 'text-gray-400 cursor-not-allowed' 
+                : 'text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            Next
+          </button>
+        </div>
+        <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-gray-700">
+              Showing <span className="font-medium">{((currentPage - 1) * 5) + 1}</span> to{' '}
+              <span className="font-medium">
+                {Math.min(currentPage * 5, totalCount)}
+              </span>{' '}
+              of <span className="font-medium">{totalCount}</span> results
+            </p>
+          </div>
+          <div>
+            <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+              <button
+                onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
+                disabled={currentPage === 1}
+                className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${
+                  currentPage === 1 ? 'cursor-not-allowed' : 'hover:text-gray-500'
+                }`}
+              >
+                <span className="sr-only">Previous</span>
+                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                </svg>
+              </button>
+              {[...Array(totalPages)].map((_, i) => (
+                <button
+                  key={i + 1}
+                  onClick={() => setCurrentPage(i + 1)}
+                  className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                    currentPage === i + 1
+                      ? 'z-10 bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
+                      : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0'
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+                disabled={currentPage === totalPages}
+                className={`relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${
+                  currentPage === totalPages ? 'cursor-not-allowed' : 'hover:text-gray-500'
+                }`}
+              >
+                <span className="sr-only">Next</span>
+                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </nav>
+          </div>
+        </div>
+      </div>
     </div>
   );
-} 
+}

@@ -50,10 +50,11 @@ export async function POST(request: Request) {
         email: decodedToken.email,
         displayName: user.displayName || decodedToken.email?.split('@')[0],
         token: token,
+        twilioNumber: salesperson?.twilio_number || null,
         role: salesperson ? 'salesperson' : 'admin',
         redirectTo: salesperson ? '/salesperson' : '/admin'
       };
-
+       console.log('User data:', userData);
       return NextResponse.json({
         valid: true,
         user: userData

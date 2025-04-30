@@ -2,7 +2,7 @@ import { Fragment, useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { Member, MemberRole } from '@/types/member';
-
+import { formatPhoneNumber } from '@/utils/formatters';
 interface AddMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -12,20 +12,6 @@ interface AddMemberModalProps {
   initialData?: Partial<Member>;
   mode?: 'add' | 'edit';
 }
-
-const formatPhoneNumber = (value: string) => {
-  // Remove all non-digits
-  const digits = value.replace(/\D/g, '');
-  
-  // Format according to length
-  if (digits.length <= 3) {
-    return digits;
-  } else if (digits.length <= 6) {
-    return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-  } else {
-    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
-  }
-};
 
 export default function AddMemberModal({
   isOpen,
