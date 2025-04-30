@@ -4,7 +4,8 @@ import { CreateSalespersonInput } from '@/types/salesperson';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { initializeApp } from 'firebase/app';
 import {firebaseConfig} from '@/lib/firebase';
-// Initialize Firebase
+import { unformatPhoneNumber } from '@/utils/formatters';
+
 
 
 const app = initializeApp(firebaseConfig);
@@ -13,7 +14,7 @@ const auth = getAuth(app);
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { first_name, last_name, email, phone, password } = body as CreateSalespersonInput & { password: string };
+    const { first_name, last_name, email, phone, password, twilio_number } = body as CreateSalespersonInput & { password: string };
 
     // Validate required fields
     if (!first_name || !last_name || !email || !phone || !password) {
@@ -71,12 +72,13 @@ export async function POST(request: Request) {
       updatedAt: new Date()
     };
 
-    // Create salesperson record
+    // Create salesperson record with unformatted phone numbers
     const newSalesperson = {
       first_name,
       last_name,
       email,
-      phone,
+      phone: unformatPhoneNumber(phone),
+      twilio_number: twilio_number ? unformatPhoneNumber(twilio_number) : null,
       firebase_uid: firebaseUser.uid,
       status: 'active',
       role: 'salesperson',
@@ -117,4 +119,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-} 
+}

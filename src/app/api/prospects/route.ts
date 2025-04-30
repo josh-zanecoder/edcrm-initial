@@ -5,6 +5,12 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '5');
+    const search = searchParams.get('search') || '';
+    const skip = (page - 1) * limit;
+
     const userCookie = request.cookies.get('user')?.value;
     const tokenCookie = request.cookies.get('token')?.value;
 
@@ -17,13 +23,37 @@ export async function GET(request: NextRequest) {
     const client = await clientPromise;
     const db = client.db();
     const prospects = db.collection('prospects');
+
+    // Build search query
+    const searchQuery = search
+      ? {
+          $and: [
+            { 'assignedTo.id': userData.uid },
+            {
+              $or: [
+                { collegeName: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+                { phone: { $regex: search, $options: 'i' } },
+                { 'address.city': { $regex: search, $options: 'i' } },
+                { 'address.state': { $regex: search, $options: 'i' } },
+                { county: { $regex: search, $options: 'i' } }
+              ]
+            }
+          ]
+        }
+      : { 'assignedTo.id': userData.uid };
+
+    // Get total count with search query
+    const totalCount = await prospects.countDocuments(searchQuery);
+
+    // Get paginated prospects with search query
+    const prospectsList = await prospects.find(searchQuery)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
     
-    // Filter prospects where assignedTo.id matches the logged-in user's ID
-    const prospectsList = await prospects.find({
-      'assignedTo.id': userData.uid
-    }).toArray();
-    
-    // Transform _id to id and ensure user fields are properly structured
+    // Transform prospects
     const formattedProspects = prospectsList.map(prospect => ({
       ...prospect,
       id: prospect._id.toString(),
@@ -44,7 +74,13 @@ export async function GET(request: NextRequest) {
       }
     }));
     
-    return NextResponse.json(formattedProspects);
+    return NextResponse.json({
+      prospects: formattedProspects,
+      totalCount,
+      currentPage: page,
+      totalPages: Math.ceil(totalCount / limit),
+      limit
+    });
   } catch (error) {
     console.error('Error fetching prospects:', error);
     return NextResponse.json(
@@ -53,4 +89,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
- 

@@ -1,8 +1,10 @@
 'use client';
 
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment, useState } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { Prospect, CollegeType } from '@/types/prospect';
+import toast from 'react-hot-toast';
+import { formatPhoneNumber } from '@/utils/formatters';
 
 interface AddProspectModalProps {
   isOpen: boolean;
@@ -10,34 +12,61 @@ interface AddProspectModalProps {
   onSave: (prospect: Omit<Prospect, 'id' | 'createdAt' | 'updatedAt' | 'addedBy' | 'assignedTo'>) => void;
 }
 
-export default function AddProspectModal({ isOpen, onClose, onSave }: AddProspectModalProps) {
-  const [formData, setFormData] = useState({
-    collegeName: '',
-    phone: '',
-    email: '',
-    address: {
-      city: '',
-      state: '',
-      zip: ''
-    },
-    county: '',
-    website: '',
-    collegeTypes: [] as CollegeType[],
-    bppeApproved: false,
-    status: 'New' as const,
-    lastContact: new Date().toISOString().split('T')[0]
-  });
+const initialFormState = {
+  collegeName: '',
+  phone: '',
+  email: '',
+  address: {
+    city: '',
+    state: '',
+    zip: ''
+  },
+  county: '',
+  website: '',
+  collegeTypes: [] as CollegeType[],
+  bppeApproved: false,
+  status: 'New' as const,
+  lastContact: new Date().toISOString().split('T')[0]
+};
 
+export default function AddProspectModal({ isOpen, onClose, onSave }: AddProspectModalProps) {
+  const [formData, setFormData] = useState(initialFormState);
   const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
+
+  const isValidPhoneNumber = (phone: string): boolean => {
+    const phoneRegex = /^\(\d{3}\) \d{3}-\d{4}$/;
+    return phoneRegex.test(phone);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate phone number before submitting
+    if (!isValidPhoneNumber(formData.phone)) {
+      toast.error('Please enter a valid phone number in format (XXX) XXX-XXXX');
+      return;
+    }
+    
     onSave(formData);
+    // Reset form to initial state
+    setFormData(initialFormState);
+    // Close modal
     onClose();
   };
 
+
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    
+    if (name === 'phone') {
+      const formattedPhone = formatPhoneNumber(value);
+      setFormData(prev => ({
+        ...prev,
+        [name]: formattedPhone
+      }));
+      return;
+    }
     
     if (name.startsWith('address.')) {
       const field = name.split('.')[1];
@@ -64,6 +93,14 @@ export default function AddProspectModal({ isOpen, onClose, onSave }: AddProspec
         : [...prev.collegeTypes, type]
     }));
   };
+
+  // Add useEffect to reset form when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData(initialFormState);
+      setIsTypeDropdownOpen(false);
+    }
+  }, [isOpen]);
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -196,11 +233,21 @@ export default function AddProspectModal({ isOpen, onClose, onSave }: AddProspec
                           name="phone"
                           id="phone"
                           required
-                          className="block w-full rounded-xl border-0 py-3 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all duration-200"
+                          maxLength={14}
+                          className={`block w-full rounded-xl border-0 py-3 px-4 text-gray-900 shadow-sm ring-1 ring-inset ${
+                            formData.phone && !isValidPhoneNumber(formData.phone)
+                              ? 'ring-red-300 focus:ring-red-500'
+                              : 'ring-gray-300 focus:ring-blue-600'
+                          } placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6 transition-all duration-200`}
                           value={formData.phone}
                           onChange={handleChange}
                           placeholder="(555) 123-4567"
                         />
+                        {formData.phone && !isValidPhoneNumber(formData.phone) && (
+                          <p className="mt-1 text-xs text-red-500">
+                            Please enter a valid phone number in format (XXX) XXX-XXXX
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -350,4 +397,4 @@ export default function AddProspectModal({ isOpen, onClose, onSave }: AddProspec
       </Dialog>
     </Transition>
   );
-} 
+}

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { CreateSalespersonInput } from '@/types/salesperson';
+import { formatPhoneNumber, unformatPhoneNumber } from '@/utils/formatters';
+import toast from 'react-hot-toast';
 
 interface AddSalespersonModalProps {
   isOpen: boolean;
@@ -17,6 +19,7 @@ export default function AddSalespersonModal({ isOpen, onClose, onSalespersonAdde
     phone: '',
     password: 'Default@123',
     role: 'salesperson',
+    twilio_number: '', // Add this field
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -30,6 +33,45 @@ export default function AddSalespersonModal({ isOpen, onClose, onSalespersonAdde
       setShowModal(false);
     }
   }, [isOpen]);
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'phone' | 'twilio_number') => {
+    const { value } = e.target;
+    const formattedValue = formatPhoneNumber(value);
+    
+    setFormData(prev => ({
+      ...prev,
+      [field]: formattedValue
+    }));
+
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    
+    // Use phone formatter for phone fields
+    if (name === 'phone' || name === 'twilio_number') {
+      handlePhoneChange(e, name as 'phone' | 'twilio_number');
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    // Clear error when user starts typing
+    if (errors[name as keyof CreateSalespersonInput]) {
+      setErrors(prev => ({ ...prev, [name]: undefined }));
+    }
+    // Clear API error when user makes changes
+    if (apiError) {
+      setApiError(null);
+    }
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Partial<CreateSalespersonInput> = {};
@@ -48,8 +90,16 @@ export default function AddSalespersonModal({ isOpen, onClose, onSalespersonAdde
       newErrors.email = 'Invalid email format';
     }
     
+    const phoneRegex = /^\+?1?\s*\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})$/;
+    
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone is required';
+    } else if (!phoneRegex.test(unformatPhoneNumber(formData.phone))) {
+      newErrors.phone = 'Invalid phone number format';
+    }
+
+    if (formData.twilio_number && !phoneRegex.test(unformatPhoneNumber(formData.twilio_number))) {
+      newErrors.twilio_number = 'Invalid Twilio number format';
     }
     
     setErrors(newErrors);
@@ -61,10 +111,19 @@ export default function AddSalespersonModal({ isOpen, onClose, onSalespersonAdde
     setApiError(null);
     
     if (!validateForm()) {
+      // Show validation errors in toast only during submission
+      if (errors.phone) {
+        toast.error('Please enter a valid phone number');
+      }
+      if (errors.twilio_number) {
+        toast.error('Please enter a valid Twilio number');
+      }
+      toast.error('Please fix the form errors before submitting');
       return;
     }
 
     setIsSubmitting(true);
+    const loadingToast = toast.loading('Creating new salesperson...');
 
     try {
       const response = await fetch('/api/admin-salespersons/create', {
@@ -72,7 +131,11 @@ export default function AddSalespersonModal({ isOpen, onClose, onSalespersonAdde
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          phone: unformatPhoneNumber(formData.phone),
+          twilio_number: formData.twilio_number ? unformatPhoneNumber(formData.twilio_number) : null
+        }),
       });
 
       const data = await response.json();
@@ -81,6 +144,10 @@ export default function AddSalespersonModal({ isOpen, onClose, onSalespersonAdde
         throw new Error(data.error || 'Failed to create salesperson');
       }
 
+      toast.success('Salesperson created successfully!', {
+        id: loadingToast,
+      });
+
       if (onSalespersonAdded) {
         onSalespersonAdded();
       }
@@ -88,25 +155,12 @@ export default function AddSalespersonModal({ isOpen, onClose, onSalespersonAdde
       onClose();
     } catch (error) {
       console.error('Error creating salesperson:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create salesperson', {
+        id: loadingToast,
+      });
       setApiError(error instanceof Error ? error.message : 'Failed to create salesperson');
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // Clear error when user starts typing
-    if (errors[name as keyof CreateSalespersonInput]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }));
-    }
-    // Clear API error when user makes changes
-    if (apiError) {
-      setApiError(null);
     }
   };
 
@@ -238,11 +292,30 @@ export default function AddSalespersonModal({ isOpen, onClose, onSalespersonAdde
                             ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
                             : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                         }`}
-                        placeholder="Enter phone number"
+                        placeholder="(555) 123-4567"
                       />
                       {errors.phone && (
                         <p className="mt-1.5 text-sm font-medium text-red-600">{errors.phone}</p>
                       )}
+                    </div>
+
+                    {/* Add this new field before the note about default password */}
+                    <div>
+                      <label htmlFor="twilio_number" className="block text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
+                        Twilio Number (Optional)
+                      </label>
+                      <input
+                        type="tel"
+                        id="twilio_number"
+                        name="twilio_number"
+                        value={formData.twilio_number}
+                        onChange={handleChange}
+                        className="block w-full rounded-md border-2 border-gray-300 shadow-sm text-sm sm:text-base transition-colors duration-200 px-3 py-2.5 sm:px-4 sm:py-3 placeholder:text-gray-400 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+                        placeholder="+1 (555) 123-4567"
+                      />
+                      <p className="mt-1 text-sm text-gray-500">
+                        Format: +1XXXXXXXXXX (include country code)
+                      </p>
                     </div>
 
                     <div className="mt-4 p-4 bg-blue-50 rounded-md">
@@ -286,4 +359,4 @@ export default function AddSalespersonModal({ isOpen, onClose, onSalespersonAdde
       </div>
     </div>
   );
-} 
+}
