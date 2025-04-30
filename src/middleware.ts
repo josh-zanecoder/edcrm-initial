@@ -7,7 +7,14 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public paths that don't require authentication
-  const publicPaths = ['/login', '/api/auth/login', '/api/auth/verify'];
+  const publicPaths = [
+    '/login', 
+    '/api/auth/login', 
+    '/api/auth/verify', 
+    '/api/twilio/voice',
+    '/api/twilio/call-status',
+    '/api/twilio/recording-status'
+  ];
   if (publicPaths.includes(pathname)) {
     return NextResponse.next();
   }
