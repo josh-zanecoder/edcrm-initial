@@ -4,7 +4,7 @@ import { getAuth } from 'firebase-admin/auth';
 // Initialize Firebase Admin if not already initialized
 if (!getApps().length) {
   try {
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_ADMIN_PROJECT_ID;
     const clientEmail = process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL;
     const privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
@@ -25,7 +25,11 @@ if (!getApps().length) {
         privateKey: privateKey.replace(/\\n/g, '\n'),
       }),
     });
-    console.log('Firebase Admin initialized successfully');
+    console.log('Firebase Admin initialized successfully with:', {
+      projectId,
+      clientEmail,
+      privateKeyLength: privateKey.length
+    });
   } catch (error) {
     console.error('Error initializing Firebase Admin:', error);
     throw error;

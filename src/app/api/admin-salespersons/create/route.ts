@@ -35,14 +35,15 @@ export async function POST(request: Request) {
     const client = await clientPromise;
     const db = client.db();
 
-    // Check if email already exists in MongoDB
-    const existingSalesperson = await db
-      .collection('salespersons')
-      .findOne({ email });
+    // Check if email already exists in either collection
+    const [existingUser, existingSalesperson] = await Promise.all([
+      db.collection('users').findOne({ email }),
+      db.collection('salespersons').findOne({ email })
+    ]);
 
-    if (existingSalesperson) {
+    if (existingUser || existingSalesperson) {
       return NextResponse.json(
-        { error: 'A salesperson with this email already exists' },
+        { error: 'A user with this email already exists' },
         { status: 400 }
       );
     }
@@ -60,7 +61,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create new salesperson in MongoDB
+    // Create user record
+    const newUser = {
+      firebase_uid: firebaseUser.uid,
+      email,
+      role: 'salesperson',
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // Create salesperson record
     const newSalesperson = {
       first_name,
       last_name,
@@ -71,27 +82,30 @@ export async function POST(request: Request) {
       role: 'salesperson',
       joinDate: new Date().toISOString(),
       createdAt: new Date(),
-      updatedAt: new Date(),
+      updatedAt: new Date()
     };
 
-    // First, create the salesperson record
-    const result = await db.collection('salespersons').insertOne(newSalesperson);
-
-    // Then, create a separate user roles record
-    await db.collection('user_roles').insertOne({
-      user_id: firebaseUser.uid,
-      email: email,
-      role: 'salesperson',
-      created_at: new Date(),
-      updated_at: new Date()
-    });
+    // Create both records in a transaction
+    const session = client.startSession();
+    try {
+      await session.withTransaction(async () => {
+        await db.collection('users').insertOne(newUser);
+        await db.collection('salespersons').insertOne(newSalesperson);
+      });
+    } finally {
+      await session.endSession();
+    }
 
     return NextResponse.json(
       { 
         message: 'Salesperson created successfully',
+        user: {
+          ...newUser,
+          id: newUser.firebase_uid
+        },
         salesperson: {
-          id: result.insertedId.toString(),
-          ...newSalesperson
+          ...newSalesperson,
+          id: newSalesperson.firebase_uid
         }
       },
       { status: 201 }

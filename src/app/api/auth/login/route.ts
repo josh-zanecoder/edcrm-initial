@@ -23,10 +23,23 @@ export async function POST(request: Request) {
       const client = await clientPromise;
       const db = client.db();
 
-      // Check if user exists in salespersons collection
-      const salesperson = await db.collection('salespersons').findOne({ 
+      // Check if user exists in users collection
+      const userRecord = await db.collection('users').findOne({ 
         firebase_uid: user.uid 
       });
+
+      // If user doesn't exist in MongoDB, deny access
+      if (!userRecord) {
+        return NextResponse.json(
+          { error: 'User not authorized. Please contact administrator.' },
+          { status: 403 }
+        );
+      }
+
+      // Get additional user data from salespersons collection if needed
+      const salesperson = userRecord.role === 'salesperson' 
+        ? await db.collection('salespersons').findOne({ firebase_uid: user.uid })
+        : null;
 
       // Create a session with the user data
       const session = {
@@ -34,8 +47,10 @@ export async function POST(request: Request) {
         email: user.email,
         displayName: user.displayName || email.split('@')[0],
         token: token,
-        role: salesperson ? 'salesperson' : 'admin',
-        redirectTo: salesperson ? '/salesperson' : '/admin'
+        role: userRecord.role,
+        firstName: salesperson?.first_name,
+        lastName: salesperson?.last_name,
+        redirectTo: userRecord.role === 'admin' ? '/admin' : '/salesperson'
       };
 
       return NextResponse.json({
