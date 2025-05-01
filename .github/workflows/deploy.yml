@@ -1,0 +1,263 @@
+name: EDCRM Deployment
+
+on:
+  push:
+    branches: [feature/deployment-v2]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: poc-1-aima-pmu
+  SERVICE_NAME: edcrm
+  REGION: us-west1
+  ARTIFACT_REGISTRY: us-west1-docker.pkg.dev/poc-1-aima-pmu/edcrm
+  SERVICE_ACCOUNT: 980800581325-compute@developer.gserviceaccount.com
+    
+jobs:
+  deploy:
+    name: EDCRM Deployment
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Fetch environment variables from Secret Manager
+        id: secrets
+        run: |
+          echo "Fetching environment variables from Secret Manager"
+          
+          # Fetch all environment variables from the single secret
+          ENV_JSON=$(gcloud secrets versions access latest --secret="edcrm-secrets-nxt" --project=${{ env.PROJECT_ID }})
+          
+          # Create .env file from JSON
+          echo "Creating .env file"
+          echo "$ENV_JSON" | jq -r 'to_entries | .[] | .key + "=" + (.value | tostring)' > .env
+          
+          # Set all environment variables for build process
+          echo "Setting environment variables for build"
+          while IFS='=' read -r key value; do
+            # Skip empty lines and comments
+            [[ -z "$key" || "$key" == \#* ]] && continue
+            
+            # Mask sensitive values in GitHub Actions
+            echo "::add-mask::$value"
+            echo "$key=$value" >> $GITHUB_ENV
+            echo "Added masked build variable: $key"
+          done < .env
+          
+          # Ensure no sensitive data is logged
+          echo "Environment variables have been set securely"
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Create Artifact Registry repository if not exists
+        run: |
+          if ! gcloud artifacts repositories describe edcrm --location=${{ env.REGION }} --project=${{ env.PROJECT_ID }} 2>/dev/null; then
+            echo "Creating Artifact Registry repository..."
+            gcloud artifacts repositories create edcrm \
+              --repository-format=docker \
+              --location=${{ env.REGION }} \
+              --project=${{ env.PROJECT_ID }} \
+              --description="Repository for EDCRM"
+          else
+            echo "Repository already exists"
+          fi
+
+      - name: Generate timestamp for unique version
+        id: timestamp
+        run: echo "timestamp=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        run: |
+          # Create build args string from environment variables
+          BUILD_ARGS=()
+          while IFS='=' read -r key value; do
+            # Skip empty lines, comments, and PORT variable
+            [[ -z "$key" || "$key" == \#* || "$key" == "PORT" ]] && continue
+            escaped_value=$(printf '%s\n' "$value" | sed 's/"/\\"/g')
+            BUILD_ARGS+=(--build-arg "$key=$escaped_value")
+          done < .env
+      
+          echo "Building Docker image with args: ${BUILD_ARGS[*]}"
+          
+          docker build "${BUILD_ARGS[@]}" -t ${{ env.ARTIFACT_REGISTRY }}/${{ env.SERVICE_NAME }}:${{ steps.timestamp.outputs.timestamp }} --no-cache .
+          
+          docker push ${{ env.ARTIFACT_REGISTRY }}/${{ env.SERVICE_NAME }}:${{ steps.timestamp.outputs.timestamp }}
+      
+      - name: Get current traffic allocation
+        id: get-traffic
+        run: |
+          # Check if the service exists and get current revision info
+          if gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} 2>/dev/null; then
+            # Get the current active revision
+            CURRENT_REVISION=$(gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} --format="value(status.traffic.revisionName)" | head -n 1)
+            echo "Current active revision: $CURRENT_REVISION"
+            
+            # Determine the next tag based on current revision
+            if [[ $CURRENT_REVISION == *"-blue-"* ]]; then
+              echo "current=blue" >> $GITHUB_OUTPUT
+              echo "next=green" >> $GITHUB_OUTPUT
+            else
+              echo "current=green" >> $GITHUB_OUTPUT
+              echo "next=blue" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Service doesn't exist yet, start with blue
+            echo "current=none" >> $GITHUB_OUTPUT
+            echo "next=blue" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy new revision
+        id: deploy
+        run: |
+          # Create env vars string for deployment
+          ENV_VARS=""
+          while IFS='=' read -r key value; do
+            # Skip empty lines, comments, and PORT variable
+            [[ -z "$key" || "$key" == \#* || "$key" == "PORT" ]] && continue
+            
+            # For Firebase private key, preserve the \\n as is
+            if [[ "$key" == "FIREBASE_PRIVATE_KEY" ]]; then
+              # Just escape quotes and dollar signs, keep \\n intact
+              escaped_value=$(printf '%s' "$value" | sed 's/"/\\"/g' | sed 's/\$/\\$/g')
+            else
+              # For other variables, normal escaping
+              escaped_value=$(printf '%s' "$value" | sed 's/"/\\"/g' | sed 's/\$/\\$/g')
+            fi
+            
+            ENV_VARS="$ENV_VARS,${key}=${escaped_value}"
+          done < .env
+          
+          # Remove leading comma and format for gcloud command
+          ENV_VARS=${ENV_VARS#,}
+          
+          # Check if service exists
+          if gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} 2>/dev/null; then
+            # Service exists - deploy new revision with no traffic
+            echo "Updating existing service..."
+            gcloud run deploy ${{ env.SERVICE_NAME }} \
+              --image ${{ env.ARTIFACT_REGISTRY }}/${{ env.SERVICE_NAME }}:${{ steps.timestamp.outputs.timestamp }} \
+              --region ${{ env.REGION }} \
+              --platform managed \
+              --allow-unauthenticated \
+              --service-account ${{ env.SERVICE_ACCOUNT }} \
+              --no-traffic \
+              --timeout 300 \
+              --cpu=2 \
+              --memory=1Gi \
+              --min-instances=1 \
+              --max-instances=10 \
+              --concurrency=80 \
+              --execution-environment=gen2 \
+              --set-env-vars="$ENV_VARS" \
+              --tag ${{ steps.get-traffic.outputs.next }}
+          else
+            # Service doesn't exist - create new service
+            echo "Creating new service..."
+            gcloud run deploy ${{ env.SERVICE_NAME }} \
+              --image ${{ env.ARTIFACT_REGISTRY }}/${{ env.SERVICE_NAME }}:${{ steps.timestamp.outputs.timestamp }} \
+              --region ${{ env.REGION }} \
+              --platform managed \
+              --allow-unauthenticated \
+              --service-account ${{ env.SERVICE_ACCOUNT }} \
+              --timeout 300 \
+              --cpu=2 \
+              --memory=1Gi \
+              --min-instances=1 \
+              --max-instances=10 \
+              --concurrency=80 \
+              --execution-environment=gen2 \
+              --set-env-vars="$ENV_VARS" \
+              --tag ${{ steps.get-traffic.outputs.next }}
+          fi
+
+      - name: Test new deployment
+        id: test-deployment
+        run: |
+          # Get service URL and construct health check URL
+          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region ${{ env.REGION }} \
+            --format="value(status.url)")
+          HEALTH_CHECK_URL="${SERVICE_URL}/api/health"
+          
+          # Initial wait for service to initialize
+          sleep 10
+          
+          # Health check with retries
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          SUCCESS=false
+          
+          until [ $RETRY_COUNT -ge $MAX_RETRIES ] || [ "$SUCCESS" = true ]; do
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            
+            # Simple curl request with just the status code
+            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_CHECK_URL")
+            
+            if [ "$STATUS_CODE" -eq 200 ]; then
+              SUCCESS=true
+            else
+              sleep 15
+            fi
+          done
+          
+          # Set output based on success
+          if [ "$SUCCESS" = true ]; then
+            echo "test_success=true" >> $GITHUB_OUTPUT
+          else
+            echo "test_success=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Migrate traffic to new revision
+        if: steps.test-deployment.outputs.test_success == 'true'
+        run: |
+          echo "Deployment test passed successfully"
+          echo "Migrating 100% traffic to new revision with tag: ${{ steps.get-traffic.outputs.next }}"
+          gcloud run services update-traffic ${{ env.SERVICE_NAME }} \
+            --region ${{ env.REGION }} \
+            --to-tags ${{ steps.get-traffic.outputs.next }}=100
+          echo "Traffic migration completed successfully"
+
+      - name: Rollback if test failed
+        if: steps.test-deployment.outputs.test_success == 'false'
+        run: |
+          echo "Deployment test failed"
+          echo "Initiating rollback to previous revision"
+          # Get the previous revision
+          PREVIOUS_REVISION=$(gcloud run revisions list \
+            --service ${{ env.SERVICE_NAME }} \
+            --region ${{ env.REGION }} \
+            --format="value(name)" \
+            --sort-by=~creationTimestamp \
+            --limit=2 | tail -n 1)
+          
+          if [ -n "$PREVIOUS_REVISION" ]; then
+            echo "Rolling back to revision: $PREVIOUS_REVISION"
+            gcloud run services update-traffic ${{ env.SERVICE_NAME }} \
+              --region ${{ env.REGION }} \
+              --to-revisions $PREVIOUS_REVISION=100
+            echo "Rollback completed successfully"
+          else
+            echo "No previous revision found for rollback"
+          fi
