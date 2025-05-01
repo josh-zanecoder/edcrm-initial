@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@/lib/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import clientPromise from '@/lib/mongodb';
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import clientPromise from "@/lib/mongodb";
 
 export async function POST(request: Request) {
   try {
@@ -9,13 +9,17 @@ export async function POST(request: Request) {
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        { error: "Email and password are required" },
         { status: 400 }
       );
     }
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
       const token = await user.getIdToken();
 
@@ -24,52 +28,55 @@ export async function POST(request: Request) {
       const db = client.db();
 
       // Check if user exists in users collection
-      const userRecord = await db.collection('users').findOne({ 
-        firebase_uid: user.uid 
+      const userRecord = await db.collection("users").findOne({
+        firebase_uid: user.uid,
       });
 
       // If user doesn't exist in MongoDB, deny access
       if (!userRecord) {
         return NextResponse.json(
-          { error: 'User not authorized. Please contact administrator.' },
+          { error: "User not authorized. Please contact administrator." },
           { status: 403 }
         );
       }
 
       // Get additional user data from salespersons collection if needed
-      const salesperson = userRecord.role === 'salesperson' 
-        ? await db.collection('salespersons').findOne({ firebase_uid: user.uid })
-        : null;
+      const salesperson =
+        userRecord.role === "salesperson"
+          ? await db
+              .collection("salespersons")
+              .findOne({ firebase_uid: user.uid })
+          : null;
 
       // Create a session with the user data
       const session = {
         uid: user.uid,
         email: user.email,
-        displayName: user.displayName || email.split('@')[0],
+        displayName: user.displayName || email.split("@")[0],
         token: token,
         role: userRecord.role,
         id: salesperson?._id,
         firstName: salesperson?.first_name,
         twilioNumber: salesperson?.twilio_number || null,
         lastName: salesperson?.last_name,
-        redirectTo: userRecord.role === 'admin' ? '/admin' : '/salesperson'
+        redirectTo: userRecord.role === "admin" ? "/admin" : "/salesperson",
       };
 
       return NextResponse.json({
         user: session,
-        message: 'Login successful'
+        message: "Login successful",
       });
     } catch (firebaseError: unknown) {
-      console.error('Firebase authentication error:', firebaseError);
+      console.error("Firebase authentication error:", firebaseError);
       return NextResponse.json(
-        { error: (firebaseError as Error).message || 'Authentication failed' },
+        { error: (firebaseError as Error).message || "Authentication failed" },
         { status: 401 }
       );
     }
   } catch (error: unknown) {
-    console.error('Login error:', error);
+    console.error("Login error:", error);
     return NextResponse.json(
-      { error: 'Invalid request format' },
+      { error: "Invalid request format" },
       { status: 400 }
     );
   }

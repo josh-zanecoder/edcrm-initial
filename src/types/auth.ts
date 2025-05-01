@@ -1,4 +1,4 @@
-import { ObjectId } from 'mongodb';
+import { ObjectId } from "mongodb";
 
 export interface User {
   uid: string;
@@ -6,7 +6,7 @@ export interface User {
   displayName: string | null;
   token: string;
   twilioNumber: string | null;
-  role: 'admin' | 'salesperson';
+  role: "admin" | "salesperson";
   id: ObjectId | null;
   redirectTo: string;
   twilio_number?: string | null;
@@ -27,4 +27,4 @@ export interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-} 
+}
