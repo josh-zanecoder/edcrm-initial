@@ -3,7 +3,7 @@ import { BookOpen, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 interface LoginFormProps extends React.ComponentProps<"div"> {
@@ -37,11 +37,26 @@ export function LoginForm({
   setIsForgotPassword,
   ...props
 }: LoginFormProps) {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShow(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className={cn("flex flex-col gap-4", className)} {...props}>
       <form onSubmit={onSubmit} className="overflow-hidden">
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col items-center gap-2">
+          <div
+            className={cn(
+              "flex flex-col items-center gap-2",
+              "[transform:translateY(20px)] opacity-0",
+              "transition-[transform,opacity] duration-700 ease-out",
+              show && "!transform-none !opacity-100"
+            )}
+            style={{ transitionDelay: "150ms" }}
+          >
             <a
               href="#"
               className="flex flex-col items-center gap-2 font-medium"
@@ -54,7 +69,15 @@ export function LoginForm({
             <h1 className="text-xl font-bold">Welcome to Edtracts CRM</h1>
           </div>
           <div className="flex flex-col gap-4">
-            <div className="grid gap-2">
+            <div
+              className={cn(
+                "grid gap-2",
+                "[transform:translateY(20px)] opacity-0",
+                "transition-[transform,opacity] duration-700 ease-out",
+                show && "!transform-none !opacity-100"
+              )}
+              style={{ transitionDelay: "300ms" }}
+            >
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -67,9 +90,12 @@ export function LoginForm({
             </div>
             <div
               className={cn(
-                "transition-all duration-500 ease-in-out",
+                "[transform:translateY(20px)] opacity-0",
+                "transition-[transform,opacity,height] duration-700 ease-out",
+                show && "!transform-none !opacity-100",
                 isForgotPassword ? "h-[48px]" : "h-[90px]"
               )}
+              style={{ transitionDelay: "450ms" }}
             >
               <div className="relative h-full">
                 <div
@@ -126,9 +152,12 @@ export function LoginForm({
             </div>
             <div
               className={cn(
-                "transition-all duration-500 ease-in-out",
-                "relative h-10"
+                "relative h-10",
+                "[transform:translateY(20px)] opacity-0",
+                "transition-[transform,opacity] duration-700 ease-out",
+                show && "!transform-none !opacity-100"
               )}
+              style={{ transitionDelay: "600ms" }}
             >
               <div
                 className={cn(
@@ -178,7 +207,15 @@ export function LoginForm({
           </div>
         </div>
       </form>
-      <div className="text-center text-sm">
+      <div
+        className={cn(
+          "text-center text-sm",
+          "[transform:translateY(20px)] opacity-0",
+          "transition-[transform,opacity] duration-700 ease-out",
+          show && "!transform-none !opacity-100"
+        )}
+        style={{ transitionDelay: "750ms" }}
+      >
         <button
           onClick={() => setIsForgotPassword(!isForgotPassword)}
           className="dark:text-zinc-300 dark:hover:text-zinc-400 text-zinc-700 hover:text-zinc-500 transition-colors duration-200 disabled:opacity-50"
@@ -186,7 +223,15 @@ export function LoginForm({
           {!isForgotPassword ? "Forgot your password?" : "Back to login"}
         </button>
       </div>
-      <div className="text-muted-foreground *:[a]:hover:text-primary text-center text-xs text-balance *:[a]:underline *:[a]:underline-offset-4">
+      <div
+        className={cn(
+          "text-muted-foreground *:[a]:hover:text-primary text-center text-xs text-balance *:[a]:underline *:[a]:underline-offset-4",
+          "[transform:translateY(20px)] opacity-0",
+          "transition-[transform,opacity] duration-700 ease-out",
+          show && "!transform-none !opacity-100"
+        )}
+        style={{ transitionDelay: "900ms" }}
+      >
         By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
         and <a href="#">Privacy Policy</a>.
       </div>
