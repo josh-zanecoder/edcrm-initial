@@ -1,11 +1,8 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextResponse } from 'next/server';
 import { getApps } from 'firebase-admin/app';
 import '@/lib/firebase-admin';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export async function GET() {
   try {
     // Check Firebase connection
     const firebaseApps = getApps();
@@ -14,7 +11,7 @@ export default async function handler(
     }
 
     // Simplified health check response
-    res.status(200).json({ 
+    return NextResponse.json({ 
       status: 'healthy',
       timestamp: new Date().toISOString(),
       version: process.env.npm_package_version,
@@ -24,13 +21,13 @@ export default async function handler(
     });
   } catch (error) {
     console.error('Health check failed:', error);
-    res.status(503).json({ 
+    return NextResponse.json({ 
       status: 'unhealthy',
       error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString(),
       services: {
         firebase: error instanceof Error && error.message.includes('Firebase') ? 'disconnected' : 'connected'
       }
-    });
+    }, { status: 503 });
   }
-}
+} 
