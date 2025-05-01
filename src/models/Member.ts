@@ -13,7 +13,7 @@ const memberSchema = new mongoose.Schema({
   email: { 
     type: String, 
     required: [true, 'Email is required'],
-    unique: true,
+    unique: true, // <-- This sets the index
     match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email']
   },
   phone: { 
@@ -49,20 +49,19 @@ const memberSchema = new mongoose.Schema({
     default: Date.now
   }
 }, {
-  timestamps: true // Adds createdAt and updatedAt fields
+  timestamps: true
 });
 
-// Add indexes for common queries
-memberSchema.index({ email: 1 }, { unique: true });
+// ✅ Removed this: memberSchema.index({ email: 1 }, { unique: true })
+
+// Other indexes
 memberSchema.index({ prospectId: 1 });
 memberSchema.index({ collegeName: 1 });
 memberSchema.index({ role: 1 });
 memberSchema.index({ addedBy: 1 });
+memberSchema.index({ prospectId: 1, role: 1 }); // compound index
 
-// Add a compound index for prospect and role
-memberSchema.index({ prospectId: 1, role: 1 });
-
-// Virtual for full name
+// Virtual full name
 memberSchema.virtual('fullName').get(function() {
   return `${this.firstName} ${this.lastName}`;
 });
@@ -73,7 +72,7 @@ memberSchema.methods.updateLastContact = function() {
   return this.save();
 };
 
-// Pre-save middleware to format phone number (remove non-numeric characters)
+// Format phone before save
 memberSchema.pre('save', function(next) {
   if (this.isModified('phone')) {
     this.phone = this.phone.replace(/[^\d+]/g, '');
@@ -81,4 +80,5 @@ memberSchema.pre('save', function(next) {
   next();
 });
 
-export default mongoose.models.Member || mongoose.model('Member', memberSchema); 
+export default mongoose.models.Member || mongoose.model('Member', memberSchema);
+  

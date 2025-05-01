@@ -139,10 +139,7 @@ export default function ProspectDetailsPage({ params }: PageProps) {
   const handleSave = async () => {
     if (!prospect || !editedProspect) return;
 
-    if (!isValidPhoneNumber(editedProspect.phone)) {
-      toast.error('Please enter a valid phone number in format (XXX) XXX-XXXX');
-      return;
-    }
+   
 
     try {
       setIsSaving(true);
@@ -268,7 +265,7 @@ export default function ProspectDetailsPage({ params }: PageProps) {
                     </div>
                     <input
                       type="tel"
-                      value={editedProspect.phone}
+                      value={formatPhoneNumber(editedProspect.phone)}
                       onChange={(e) => handleChange('phone', e.target.value)}
                       className="w-full pl-11 pr-4 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       placeholder="(XXX) XXX-XXXX"
@@ -282,7 +279,7 @@ export default function ProspectDetailsPage({ params }: PageProps) {
               ) : (
                 <div className="flex items-center">
                   <PhoneIcon className="h-5 w-5 text-gray-400 mr-2" />
-                  <span className="text-base text-gray-900">{prospect.phone}</span>
+                  <span className="text-base text-gray-900">{formatPhoneNumber(prospect.phone)}</span>
                 </div>
               )}
             </div>

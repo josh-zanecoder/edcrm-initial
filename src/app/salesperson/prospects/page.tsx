@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import { Prospect } from '@/types/prospect';
 import AddProspectModal from '@/components/salesperson/AddProspectModal';
-import { formatAddress, formatWebsite } from '@/utils/formatters';
+import { formatAddress, formatPhoneNumber, formatWebsite } from '@/utils/formatters';
 import { useCallStore } from '@/store/useCallStore';
 import { useDebouncedCallback } from 'use-debounce';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
@@ -246,7 +246,7 @@ export default function ProspectsPage() {
                           }}
                           disabled={isCalling}
                         >
-                          {unformatPhoneNumber(prospect.phone)}
+                          {formatPhoneNumber(prospect.phone)}
                         </button>
                       </td>
                       <td 

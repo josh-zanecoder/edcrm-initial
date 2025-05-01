@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
+import connectToMongoDB from '@/lib/mongoose';
+import Member from '@/models/Member';
+import Prospect from '@/models/Prospect'; // Needed for prospect existence check
 
 const getCookies = async () => {
   const cookieStore = await cookies();
   return {
     userCookie: cookieStore.get('user'),
-    tokenCookie: cookieStore.get('token')
+    tokenCookie: cookieStore.get('token'),
   };
 };
 
-// GET /api/prospects/[id]/members - Get all members for a prospect
+// GET /api/prospects/[id]/members
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -20,68 +22,28 @@ export async function GET(
     const { userCookie, tokenCookie } = await getCookies();
 
     if (!userCookie?.value || !tokenCookie?.value) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     const { id } = await context.params;
 
     if (!id || !ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { error: 'Invalid prospect ID' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid prospect ID' }, { status: 400 });
     }
 
-    const client = await clientPromise;
-    const db = client.db();
+    await connectToMongoDB();
 
-    // First verify the prospect exists
-    const prospect = await db.collection('prospects').findOne({ 
-      _id: new ObjectId(id)
-    });
-
-    if (!prospect) {
-      return NextResponse.json(
-        { error: 'Prospect not found' },
-        { status: 404 }
-      );
+    const prospectExists = await Prospect.exists({ _id: id });
+    if (!prospectExists) {
+      return NextResponse.json({ error: 'Prospect not found' }, { status: 404 });
     }
 
-    // Fetch active members for this prospect
-    const members = await db.collection('members')
-      .find({ 
-        prospectId: new ObjectId(id),
-        isActive: true 
-      })
-      .sort({ createdAt: -1 })
-      .toArray();
+    const members = await Member.find({ 
+      prospectId: id,
+      isActive: true
+    }).sort({ createdAt: -1 });
 
-    console.log('Raw members query result:', JSON.stringify(members, null, 2));
-
-    if (!members || members.length === 0) {
-      console.log('No members found for prospect:', id);
-      return NextResponse.json([]);
-    }
-
-    // Convert ObjectId to string for the response
-    const formattedMembers = members.map(member => {
-      const formatted = {
-        ...member,
-        _id: member._id.toString(),
-        prospectId: member.prospectId.toString(),
-        addedBy: member.addedBy?.toString(),
-        createdAt: member.createdAt.toISOString(),
-        updatedAt: member.updatedAt.toISOString()
-      };
-      console.log('Formatted member:', JSON.stringify(formatted, null, 2));
-      return formatted;
-    });
-
-    console.log('Final response:', JSON.stringify(formattedMembers, null, 2));
-    return NextResponse.json(formattedMembers);
+    return NextResponse.json(members);
   } catch (error) {
     console.error('Error fetching members:', error);
     return NextResponse.json(
@@ -91,7 +53,7 @@ export async function GET(
   }
 }
 
-// POST /api/prospects/[id]/members - Create a new member
+// POST /api/prospects/[id]/members
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -100,20 +62,16 @@ export async function POST(
     const { userCookie, tokenCookie } = await getCookies();
 
     if (!userCookie?.value || !tokenCookie?.value) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     const user = JSON.parse(userCookie.value);
     const body = await request.json();
     const { id } = await context.params;
 
-    // Validate required fields
     const requiredFields = ['firstName', 'lastName', 'email', 'phone', 'role', 'collegeName'];
-    const missingFields = requiredFields.filter(field => !body[field]);
-    
+    const missingFields = requiredFields.filter((field) => !body[field]);
+
     if (missingFields.length > 0) {
       return NextResponse.json(
         { error: 'Missing required fields', fields: missingFields },
@@ -121,46 +79,44 @@ export async function POST(
       );
     }
 
-    // Validate email format
-    const emailRegex = /^\S+@\S+\.\S+$/;
-    if (!emailRegex.test(body.email)) {
-      return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 }
-      );
-    }
+    await connectToMongoDB();
 
-    // Validate phone number
-    const phoneRegex = /^\+?[\d\s-()]{10,}$/;
-    if (!phoneRegex.test(body.phone)) {
-      return NextResponse.json(
-        { error: 'Invalid phone number format' },
-        { status: 400 }
-      );
-    }
-
-    const client = await clientPromise;
-    const db = client.db();
-
-    const member = {
+    const newMember = new Member({
       ...body,
-      prospectId: new ObjectId(id),
-      addedBy: new ObjectId(user.id),
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+      prospectId: id,
+      addedBy: user.id,
+    });
 
-    const result = await db.collection('members').insertOne(member);
-    const createdMember = await db.collection('members').findOne({ _id: result.insertedId });
+    await newMember.validate();
 
-    return NextResponse.json(createdMember, { status: 201 });
-  } catch (error) {
+    const savedMember = await newMember.save();
+
+    return NextResponse.json(savedMember, { status: 201 });
+  } catch (error: unknown) {
     console.error('Error creating member:', error);
-    return NextResponse.json(
-      { error: 'Failed to create member' },
-      { status: 500 }
-    );
+  
+    // Handle Mongoose validation errors
+    if (error instanceof Error && error.name === 'ValidationError') {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+  
+    // Handle duplicate key error
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as any).code === 11000
+    ) {
+      return NextResponse.json(
+        {
+          error: 'Duplicate entry',
+          details: (error as any).keyValue,
+        },
+        { status: 409 }
+      );
+    }
+  
+    return NextResponse.json({ error: 'Failed to create member' }, { status: 500 });
   }
+  
 }
-
