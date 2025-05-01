@@ -48,6 +48,7 @@ export async function POST(request: Request) {
         displayName: user.displayName || email.split('@')[0],
         token: token,
         role: userRecord.role,
+        id: salesperson?._id,
         firstName: salesperson?.first_name,
         twilioNumber: salesperson?.twilio_number || null,
         lastName: salesperson?.last_name,

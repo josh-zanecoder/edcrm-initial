@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthState, AuthContextType, LoginCredentials } from '@/types/auth';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -44,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         displayName: data.user.displayName,
         token: data.user.token,
         role: data.user.role,
+        id: data.user.id,
         twilioNumber: data.user.twilioNumber,
         redirectTo: data.user.redirectTo,
       };
@@ -216,17 +218,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  return (
-    <AuthContext.Provider
-      value={{
-        ...authState,
-        login,
-        logout,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  const resetPassword = async (email: string) => {
+    return sendPasswordResetEmail(auth, email, {
+      url: `${window.location.origin}/login`, // Redirect URL after password reset
+    });
+  };
+
+  const value = {
+    ...authState,
+    login,
+    logout,
+    resetPassword,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
@@ -235,4 +240,4 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-} 
+}
