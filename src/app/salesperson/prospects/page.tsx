@@ -7,7 +7,6 @@ import { Prospect } from '@/types/prospect';
 import AddProspectModal from '@/components/salesperson/AddProspectModal';
 import { formatAddress, formatWebsite } from '@/utils/formatters';
 import { useCallStore } from '@/store/useCallStore';
-import Dialer from '@/components/salesperson/Dialer';
 import { useDebouncedCallback } from 'use-debounce';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
@@ -17,20 +16,16 @@ const unformatPhoneNumber = (phone: string) => {
 };
 
 export default function ProspectsPage() {
-  // Move all hooks to the top, before any conditional logic
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [isLoadingProspects, setIsLoadingProspects] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { initDevice, makeCall, isCalling } = useCallStore();
-  const [twilioError, setTwilioError] = useState<string | null>(null);
-  const [currentProspect, setCurrentProspect] = useState<Prospect | null>(null);
+  const { makeCall, isCalling } = useCallStore();
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
 
   // Define callbacks using useCallback
   const handleRowClick = useCallback((prospectId: string) => {
@@ -82,31 +77,6 @@ export default function ProspectsPage() {
     }
   }, [user, currentPage, searchQuery]);
 
-  useEffect(() => {
-    const fetchToken = async () => {
-      try {
-        setTwilioError(null);
-        console.log('Fetching Twilio token...');
-        const res = await fetch('/api/twilio/token');
-        if (!res.ok) {
-          const error = await res.json();
-          console.error('Error response from token endpoint:', error);
-          throw new Error(error.error || 'Failed to fetch Twilio token');
-        }
-        const data = await res.json();
-        console.log('Twilio token received, initializing device...');
-        initDevice(data.token);
-      } catch (error) {
-        console.error('Error fetching Twilio token:', error);
-        setTwilioError(error instanceof Error ? error.message : 'Failed to initialize Twilio');
-      }
-    };
-
-    if (user) {
-      fetchToken();
-    }
-  }, [user, initDevice]);
-
   const handleAddProspect = async (newProspect: Omit<Prospect, 'id' | 'createdAt' | 'updatedAt' | 'addedBy' | 'assignedTo'>) => {
     try {
       const response = await fetch('/api/prospects/create', {
@@ -133,7 +103,6 @@ export default function ProspectsPage() {
   };
 
   const handleMakeCall = (prospect: Prospect) => {
-    setCurrentProspect(prospect);
     makeCall({
       To: `+1${unformatPhoneNumber(prospect.phone)}`,
       CallerId: `+1${unformatPhoneNumber(user?.twilioNumber || '')}`,
@@ -203,28 +172,7 @@ export default function ProspectsPage() {
             onChange={(e) => debouncedSearch(e.target.value)}
           />
         </div>
-        {isSearching && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
-          </div>
-        )}
       </div>
-
-      {twilioError && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Twilio Error</h3>
-              <div className="mt-2 text-sm text-red-700">{twilioError}</div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {isLoadingProspects ? (
         <div className="flex justify-center">
@@ -468,13 +416,6 @@ export default function ProspectsPage() {
         onClose={() => setIsModalOpen(false)}
         onSave={handleAddProspect}
       />
-
-      {/* Dialer */}
-      {isCalling && (
-        <div className="fixed bottom-8 right-8 z-50">
-          <Dialer callerName={currentProspect?.collegeName || "Unknown Prospect"} />
-        </div>
-      )}
 
       {/* Pagination */}
       <div className="mt-6 flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">

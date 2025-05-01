@@ -3,6 +3,145 @@ import { Device, Call } from '@twilio/voice-sdk';
 import { onSnapshot, DocumentSnapshot, DocumentData, collection, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
+// Helper function to handle incoming call setup
+const handleIncomingCallSetup = (device: Device, call: Call, set: (state: Partial<CallState>) => void, get: () => CallState) => {
+  console.log('Raw call object:', call);
+  console.log('Call direction:', call.direction);
+  
+  const phoneNumber = call.parameters?.From || 'Unknown';
+  let callerName = 'Unknown';
+  
+  if (call.direction === 'INCOMING') {
+    const entries = Array.from(call.customParameters?.entries() || []);
+    const firstName = entries.find(([key]) => key === 'FirstName')?.[1];
+    const lastName = entries.find(([key]) => key === 'LastName')?.[1];
+    
+    if (firstName || lastName) {
+      callerName = [firstName, lastName].filter(Boolean).join(' ').trim();
+    } else {
+      callerName = phoneNumber;
+    }
+  } else {
+    callerName = phoneNumber;
+  }
+  
+  console.log('Final caller info:', { phoneNumber, callerName });
+  const callSid = call.parameters?.CallSid;
+
+  // Create a function for the cancel handler that we can remove later
+  const handleCancel = () => {
+    console.log('Incoming call canceled by caller:', { 
+      callSid, 
+      from: phoneNumber,
+      deviceState: device.state,
+      isCallAnswered: get().isCallAnswered,
+      timestamp: new Date().toISOString()
+    });
+
+    // Only reset state if call wasn't already accepted
+    if (!get().isCallAnswered) {
+      set({ 
+        hasIncomingCall: false,
+        incomingCallData: null,
+        isCalling: false
+      });
+      console.log('Call state reset due to cancel');
+    } else {
+      console.log('Ignoring cancel event as call was already accepted');
+    }
+  };
+
+  // Set up call event listeners
+  call.on('accept', () => {
+    console.log('Incoming call accepted:', { 
+      callSid, 
+      from: phoneNumber,
+      deviceState: device.state,
+      timestamp: new Date().toISOString()
+    });
+
+    // Remove the cancel listener when accepting the call
+    call.removeListener('cancel', handleCancel);
+    console.log('Removed cancel event listener');
+
+    const startTime = Date.now();
+    const durationInterval = setInterval(() => {
+      const duration = Math.floor((Date.now() - startTime) / 1000);
+      set({ callDuration: duration });
+    }, 1000);
+
+    set({ 
+      currentCall: call,
+      callStartTime: startTime,
+      callDurationInterval: durationInterval,
+      isCallAnswered: true,
+      isCalling: true,
+      hasIncomingCall: false
+    });
+
+    console.log('Call state updated after accept:', {
+      isCallAnswered: true,
+      isCalling: true,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  call.on('reject', () => {
+    console.log('Incoming call rejected:', { 
+      callSid, 
+      from: phoneNumber,
+      deviceState: device.state,
+      timestamp: new Date().toISOString()
+    });
+    set({ 
+      hasIncomingCall: false,
+      incomingCallData: null,
+      isCalling: false
+    });
+  });
+
+  // Add the cancel listener
+  call.on('cancel', handleCancel);
+
+  call.on('error', (error: Error) => {
+    console.error('Call error:', { 
+      callSid, 
+      from: phoneNumber, 
+      error,
+      deviceState: device.state,
+      timestamp: new Date().toISOString()
+    });
+    set({ 
+      hasIncomingCall: false,
+      incomingCallData: null,
+      connectionError: `Call error: ${error.message || 'Unknown error'}`,
+      isCalling: false
+    });
+  });
+
+  // Update state to show incoming call
+  set({ 
+    hasIncomingCall: true,
+    incomingCallData: { 
+      from: phoneNumber,  // Use the actual phone number here
+      callSid: callSid || '',
+      callerName: callerName,  // Use the formatted name here
+      callerType: 'member'  // You can adjust this based on your logic
+    },
+    currentCall: call,
+    isCalling: true
+  });
+
+  console.log('Initial call state set:', {
+    hasIncomingCall: true,
+    isCalling: true,
+    phoneNumber,
+    callerName,
+    callSid,
+    timestamp: new Date().toISOString()
+  });
+};
+
 type CallState = {
   device: Device | null;
   currentCall: Call | null;
@@ -13,11 +152,21 @@ type CallState = {
   callDuration: number;
   callDurationInterval: NodeJS.Timeout | null;
   isCallAnswered: boolean;
-  initDevice: (token: string) => void;
+  hasIncomingCall: boolean;
+  incomingCallData: { 
+    from: string; 
+    callSid: string;
+    callerName?: string;
+    callerType?: 'prospect' | 'member';
+  } | null;
+  currentProspectName: string | null;
+  initDevice: (token: string) => Promise<void>;
   makeCall: (params?: Record<string, string>) => void;
   endCall: () => void;
   retryConnection: () => void;
   sendDigit: (digit: string) => void;
+  acceptIncomingCall: () => void;
+  rejectIncomingCall: () => void;
 };
 
 export const useCallStore = create<CallState>((set, get) => ({
@@ -30,32 +179,127 @@ export const useCallStore = create<CallState>((set, get) => ({
   callDuration: 0,
   callDurationInterval: null,
   isCallAnswered: false,
+  hasIncomingCall: false,
+  incomingCallData: null,
+  currentProspectName: null,
 
-  initDevice: (token: string) => {
-    console.log('Initializing Twilio Device with token:', token.substring(0, 10) + '...');
+  initDevice: async (token: string) => {
+    console.log('Initializing Twilio Device with token:', {
+      tokenPrefix: token.substring(0, 10) + '...',
+      tokenLength: token.length,
+      timestamp: new Date().toISOString()
+    });
     set({ isConnecting: true, connectionError: null });
     
     try {
+      // Destroy existing device if any
+      const existingDevice = get().device;
+      if (existingDevice) {
+        console.log('Destroying existing device');
+        existingDevice.destroy();
+      }
+
       const device = new Device(token, {
         codecPreferences: ['opus', 'pcmu'],
         enableRingingState: true,
         fakeLocalDTMF: true,
-        // Add edge servers for better connectivity
-        edges: ['ashburn', 'dublin', 'singapore'],
-        // Add reasonable timeouts
-        maxCallSignalingTimeoutMs: 30000,
+        enableIceRestart: true,
+        rtcConfiguration: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        },
+        allowIncomingWhileBusy: true,
+        closeProtection: true,
+        debug: true,
+        enableDebugLogging: true,
+        incomingTimeout: 30
       } as Device.Options);
 
-      console.log('Device object created successfully');
+      console.log('Device object created successfully', {
+        tokenLength: token.length,
+        deviceState: device.state,
+        deviceIdentity: device.identity,
+        timestamp: new Date().toISOString()
+      });
       
-      device.on('ready', () => {
-        console.log('Twilio Device Ready event triggered');
+      // Set up registration retry
+      let registrationAttempts = 0;
+      const maxRegistrationAttempts = 3;
+      
+      const attemptRegistration = async () => {
+        if (device.state !== 'registered' && registrationAttempts < maxRegistrationAttempts) {
+          console.log(`Attempting device registration (attempt ${registrationAttempts + 1})`, {
+            currentState: device.state,
+            attempts: registrationAttempts + 1,
+            maxAttempts: maxRegistrationAttempts,
+            timestamp: new Date().toISOString()
+          });
+          
+          try {
+            await device.register();
+            console.log('Device registration request sent', {
+              deviceState: device.state,
+              timestamp: new Date().toISOString()
+            });
+          } catch (error) {
+            console.error('Registration attempt failed:', {
+              error,
+              attempt: registrationAttempts + 1,
+              deviceState: device.state,
+              timestamp: new Date().toISOString()
+            });
+          }
+          registrationAttempts++;
+        }
+      };
+
+      device.on('ready', async () => {
+        console.log('Twilio Device Ready event triggered', {
+          deviceState: device.state,
+          deviceIsRegistered: device.state === 'registered',
+          deviceIdentity: device.identity,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Attempt registration if not registered
+        if (device.state !== 'registered') {
+          await attemptRegistration();
+        }
+        
         set({ isConnecting: false, connectionError: null });
       });
       
+      device.on('registered', () => {
+        console.log('Twilio Device Registered event triggered', {
+          deviceState: device.state,
+          deviceIdentity: device.identity,
+          registrationAttempts,
+          timestamp: new Date().toISOString()
+        });
+        set({ isConnecting: false, connectionError: null });
+      });
+      
+      device.on('unregistered', async () => {
+        console.log('Twilio Device Unregistered event triggered', {
+          deviceState: device.state,
+          deviceIdentity: device.identity,
+          registrationAttempts,
+          timestamp: new Date().toISOString()
+        });
+        // Attempt re-registration
+        await attemptRegistration();
+      });
+
       device.on('error', (err) => {
-        console.error('Twilio Device Error:', err);
-        console.error('Error details:', JSON.stringify(err, null, 2));
+        console.error('Twilio Device Error:', {
+          error: err,
+          errorDetails: JSON.stringify(err, null, 2),
+          deviceState: device.state,
+          deviceIdentity: device.identity,
+          timestamp: new Date().toISOString()
+        });
         
         // Handle specific error types
         if (err.code === 31005) {
@@ -63,6 +307,8 @@ export const useCallStore = create<CallState>((set, get) => ({
             connectionError: 'Connection to Twilio was lost. Please check your internet connection.',
             isConnecting: false 
           });
+          // Attempt re-registration on connection loss
+          attemptRegistration();
         } else {
           set({ 
             connectionError: `Error: ${err.message || 'Unknown error occurred'}`,
@@ -72,7 +318,10 @@ export const useCallStore = create<CallState>((set, get) => ({
       });
       
       device.on('disconnect', () => {
-        console.log('Twilio Device Disconnect event triggered');
+        console.log('Twilio Device Disconnect event triggered', {
+          deviceState: device.state,
+          deviceIsRegistered: device.state === 'registered'
+        });
         const state = get();
         // Clear call-related state
         set({ 
@@ -81,7 +330,10 @@ export const useCallStore = create<CallState>((set, get) => ({
           callStartTime: null,
           callDuration: 0,
           isCallAnswered: false,
-          connectionError: null
+          connectionError: null,
+          callDurationInterval: null,
+          hasIncomingCall: false,
+          incomingCallData: null
         });
         
         // Stop the duration timer if it exists
@@ -91,17 +343,71 @@ export const useCallStore = create<CallState>((set, get) => ({
         }
       });
       
-      device.on('incoming', () => {
-        console.log('Twilio Device Incoming call event triggered');
-      });
-      
-      device.on('registered', () => {
-        console.log('Twilio Device Registered event triggered');
-        set({ isConnecting: false, connectionError: null });
-      });
-      
-      device.on('unregistered', () => {
-        console.log('Twilio Device Unregistered event triggered');
+      device.on('incoming', async (call) => {
+        console.log('Incoming call received:', {
+          from: call.parameters?.From,
+          callSid: call.parameters?.CallSid,
+          parameters: call.parameters,
+          deviceState: device.state,
+          deviceIsRegistered: device.state === 'registered',
+          deviceIdentity: device.identity,
+          timestamp: new Date().toISOString()
+        });
+
+        // Get caller information from parameters
+        const firstName = call.parameters?.FirstName || '';
+        const lastName = call.parameters?.LastName || '';
+        const callerName = firstName && lastName 
+          ? `${firstName} ${lastName}`.trim()
+          : firstName || call.parameters?.From || 'Unknown Caller';
+
+        // Determine if it's a prospect or member based on the name format
+        const callerType = firstName.includes('College') ? 'prospect' : 'member';
+
+        // Set isCalling and caller info
+        set({ 
+          isCalling: true,
+          hasIncomingCall: true,
+          incomingCallData: { 
+            from: call.parameters?.From || 'Unknown', 
+            callSid: call.parameters?.CallSid || '',
+            callerName,
+            callerType
+          }
+        });
+
+        console.log('Call state updated:', {
+          isCalling: true,
+          hasIncomingCall: true,
+          from: call.parameters?.From,
+          callerName,
+          callerType,
+          timestamp: new Date().toISOString()
+        });
+
+        // Ensure device is registered before proceeding
+        if (device.state !== 'registered') {
+          console.log('Device not registered, attempting registration before accepting call');
+          await attemptRegistration();
+          // Wait briefly for registration
+          setTimeout(() => {
+            if (device.state === 'registered') {
+              handleIncomingCallSetup(device, call, set, get);
+            } else {
+              console.error('Failed to register device for incoming call');
+              call.reject();
+              // Reset call state
+              set({ 
+                isCalling: false,
+                hasIncomingCall: false,
+                incomingCallData: null
+              });
+            }
+          }, 1000);
+          return;
+        }
+
+        handleIncomingCallSetup(device, call, set, get);
       });
       
       device.on('tokenWillExpire', () => {
@@ -109,10 +415,17 @@ export const useCallStore = create<CallState>((set, get) => ({
         // Here you should implement logic to get a new token
         // and call device.updateToken(newToken)
       });
-      
+
+      // Immediately attempt first registration
+      await attemptRegistration();
 
       set({ device });
-      console.log('Device state updated in store');
+      console.log('Device state updated in store', {
+        deviceState: device.state,
+        deviceIdentity: device.identity,
+        registrationAttempts,
+        timestamp: new Date().toISOString()
+      });
     } catch (error: unknown) {
       console.error('Error creating Twilio Device:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -120,6 +433,39 @@ export const useCallStore = create<CallState>((set, get) => ({
         connectionError: `Failed to initialize Twilio device: ${errorMessage}`,
         isConnecting: false 
       });
+    }
+  },
+
+  acceptIncomingCall: () => {
+    const { currentCall, incomingCallData } = get();
+    if (currentCall) {
+      console.log('Accepting incoming call');
+      currentCall.accept();
+      // Keep isCalling true when accepting the call and maintain caller info
+      set({ 
+        isCallAnswered: true,
+        hasIncomingCall: false,
+        isCalling: true,
+        // Keep the existing incomingCallData
+        incomingCallData: incomingCallData
+      });
+    } else {
+      console.warn('No incoming call to accept');
+    }
+  },
+
+  rejectIncomingCall: () => {
+    const { currentCall } = get();
+    if (currentCall) {
+      console.log('Rejecting incoming call');
+      currentCall.reject();
+      set({ 
+        currentCall: null,
+        hasIncomingCall: false,
+        incomingCallData: null
+      });
+    } else {
+      console.warn('No incoming call to reject');
     }
   },
 
@@ -377,7 +723,8 @@ export const useCallStore = create<CallState>((set, get) => ({
         callStartTime: null,
         callDuration: 0,
         callDurationInterval: null,
-        isCallAnswered: false
+        isCallAnswered: false,
+        currentProspectName: null
       });
     }
   },

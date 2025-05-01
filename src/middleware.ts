@@ -12,9 +12,12 @@ export function middleware(request: NextRequest) {
     '/api/auth/login', 
     '/api/auth/verify', 
     '/api/twilio/voice',
+    '/api/twilio/incoming',
+    '/api/twilio/dial-status',
     '/api/twilio/call-status',
     '/api/twilio/recording-status',
-    '/api/health'
+    '/api/health',
+    '/api/twilio/incoming-call-status',
   ];
   if (publicPaths.includes(pathname)) {
     return NextResponse.next();

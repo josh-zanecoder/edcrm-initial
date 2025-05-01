@@ -1,5 +1,3 @@
-
-
 export const formatAddress = (address: { city: string; state: string; zip: string } | undefined | null): string => {
   if (!address) return '';
   return `${address.city}, ${address.state} ${address.zip}`.trim();
@@ -30,7 +28,7 @@ export const formatPhoneNumber = (value: string) => {
 
 // Utility function to remove formatting from phone numbers
 export const unformatPhoneNumber = (phone: string) => {
-  return phone.replace(/[^\d+]/g, '');
+  return phone.replace(/[^\d+]/g, '').replace(/^\+1/, '');
 };
 
 

@@ -21,8 +21,19 @@ export async function GET() {
     }
 
     const user = JSON.parse(userCookie.value);
-    const identity = user.email; // Use user's email as identity
-    console.log('Generating token for user:', identity);
+    const identity = `user-${user.email}`; // Use user's email as identity
+    console.log('Generating token for user:', {
+      identity,
+      email: user.email,
+      userId: user._id,
+      fullUser: user,
+      tokenDetails: {
+        accountSid: TWILIO_ACCOUNT_SID,
+        apiKey: TWILIO_API_KEY,
+        appSid: TWILIO_APP_SID,
+        hasAllCredentials: !!(TWILIO_ACCOUNT_SID && TWILIO_API_KEY && TWILIO_API_SECRET && TWILIO_APP_SID)
+      }
+    });
 
     // Check if Twilio credentials are available
     if (!TWILIO_ACCOUNT_SID || !TWILIO_API_KEY || !TWILIO_API_SECRET || !TWILIO_APP_SID) {
@@ -55,7 +66,13 @@ export async function GET() {
 
     token.addGrant(voiceGrant);
     const jwtToken = token.toJwt();
-    console.log('Twilio token generated successfully');
+    console.log('Twilio token generated successfully', {
+      identity,
+      tokenLength: jwtToken.length,
+      tokenPrefix: jwtToken.substring(0, 20) + '...',
+      grantType: 'voice',
+      incomingAllowed: true
+    });
 
     return NextResponse.json({ token: jwtToken });
   } catch (error) {
