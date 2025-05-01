@@ -201,7 +201,12 @@ jobs:
             --format="value(status.url)")
           HEALTH_CHECK_URL="${SERVICE_URL}/api/health"
           
+          echo "Starting health check for service: ${{ env.SERVICE_NAME }}"
+          echo "Service URL: $SERVICE_URL"
+          echo "Health check URL: $HEALTH_CHECK_URL"
+          
           # Initial wait for service to initialize
+          echo "Waiting 10 seconds for service to initialize..."
           sleep 10
           
           # Health check with retries
@@ -211,21 +216,37 @@ jobs:
           
           until [ $RETRY_COUNT -ge $MAX_RETRIES ] || [ "$SUCCESS" = true ]; do
             RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "Attempt $RETRY_COUNT of $MAX_RETRIES"
             
-            # Simple curl request with just the status code
-            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_CHECK_URL")
+            # Get full response for debugging
+            echo "Making health check request..."
+            RESPONSE=$(curl -s -w "\n%{http_code}" "$HEALTH_CHECK_URL")
+            STATUS_CODE=$(echo "$RESPONSE" | tail -n1)
+            BODY=$(echo "$RESPONSE" | sed '$d')
+            
+            echo "Response Status Code: $STATUS_CODE"
+            echo "Response Body: $BODY"
             
             if [ "$STATUS_CODE" -eq 200 ]; then
+              echo "Health check passed!"
               SUCCESS=true
             else
-              sleep 15
+              echo "Health check failed with status code: $STATUS_CODE"
+              echo "Error details: $BODY"
+              
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "Waiting 15 seconds before retry..."
+                sleep 15
+              fi
             fi
           done
           
           # Set output based on success
           if [ "$SUCCESS" = true ]; then
+            echo "All health checks passed successfully"
             echo "test_success=true" >> $GITHUB_OUTPUT
           else
+            echo "Health check failed after $MAX_RETRIES attempts"
             echo "test_success=false" >> $GITHUB_OUTPUT
           fi
 
