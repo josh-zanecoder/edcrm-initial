@@ -8,12 +8,12 @@ const uri = process.env.MONGODB_URI;
 const options = {
   maxPoolSize: 10,
   minPoolSize: 5,
-  connectTimeoutMS: 10000, // 10 seconds
+  connectTimeoutMS: 30000, // Increased from 10 to 30 seconds
   socketTimeoutMS: 45000,  // 45 seconds
-  serverSelectionTimeoutMS: 10000, // 10 seconds
+  serverSelectionTimeoutMS: 30000, // Increased from 10 to 30 seconds
   heartbeatFrequencyMS: 10000, // 10 seconds
   maxIdleTimeMS: 60000, // 1 minute
-  waitQueueTimeoutMS: 10000, // 10 seconds
+  waitQueueTimeoutMS: 30000, // Increased from 10 to 30 seconds
 };
 
 // Define the type for the cached mongoose connection
@@ -29,7 +29,7 @@ declare global {
 }
 
 // Initialize cached with a default value to avoid undefined errors
-let cached: MongooseCache = global.mongoose || { conn: null, promise: null };
+const cached: MongooseCache = global.mongoose || { conn: null, promise: null };
 
 // Set the global mongoose if it doesn't exist
 if (!global.mongoose) {
@@ -38,10 +38,12 @@ if (!global.mongoose) {
 
 async function connectToMongoDB() {
   if (cached.conn) {
+    console.log('Using existing MongoDB connection');
     return cached.conn;
   }
 
   if (!cached.promise) {
+    console.log('Creating new MongoDB connection...');
     const opts = {
       bufferCommands: false,
       ...options,
@@ -50,12 +52,17 @@ async function connectToMongoDB() {
     cached.promise = mongoose.connect(uri, opts).then((mongoose) => {
       console.log('✅ Mongoose connected successfully');
       return mongoose;
+    }).catch((error) => {
+      console.error('❌ MongoDB connection error:', error);
+      throw error;
     });
   }
 
   try {
+    console.log('Waiting for MongoDB connection...');
     cached.conn = await cached.promise;
   } catch (e) {
+    console.error('Failed to establish MongoDB connection:', e);
     cached.promise = null;
     throw e;
   }
