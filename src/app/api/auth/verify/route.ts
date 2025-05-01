@@ -51,6 +51,7 @@ export async function POST(request: Request) {
         displayName: user.displayName || decodedToken.email?.split('@')[0],
         token: token,
         twilioNumber: salesperson?.twilio_number || null,
+        id: salesperson?._id || null,
         role: salesperson ? 'salesperson' : 'admin',
         redirectTo: salesperson ? '/salesperson' : '/admin'
       };

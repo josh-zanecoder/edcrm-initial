@@ -10,8 +10,34 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, resetPassword } = useAuth();
+
+  // Add password reset handler
+  const handlePasswordReset = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    if (!email) {
+      toast.error('Please enter your email address');
+      return;
+    }
+
+    try {
+      setIsResettingPassword(true);
+      await resetPassword(email);
+      toast.success('Password reset link sent to your email');
+    } catch (error: any) {
+      if (error?.message?.includes('auth/user-not-found')) {
+        toast.error('No account found with this email');
+      } else {
+        toast.error('Failed to send reset link. Please try again');
+        console.error('Password reset error:', error);
+      }
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,9 +203,13 @@ export default function LoginPage() {
             </div>
 
             <div className="text-center text-sm text-gray-500">
-              <a href="#" className="hover:text-blue-600 transition-colors duration-200">
-                Forgot your password?
-              </a>
+              <button
+                onClick={handlePasswordReset}
+                disabled={isResettingPassword}
+                className="hover:text-blue-600 transition-colors duration-200 disabled:opacity-50"
+              >
+                {isResettingPassword ? 'Sending reset link...' : 'Forgot your password?'}
+              </button>
             </div>
           </form>
         </div>
