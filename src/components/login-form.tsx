@@ -164,7 +164,7 @@ export function LoginForm({
         <div className="text-center text-sm">
           <button
             onClick={() => setIsForgotPassword(true)}
-            className="text-zinc-300 hover:text-zinc-400 transition-colors duration-200 disabled:opacity-50"
+            className="dark:text-zinc-300 dark:hover:text-zinc-400 text-zinc-700 hover:text-zinc-500 transition-colors duration-200 disabled:opacity-50"
           >
             Forgot your password?
           </button>
@@ -173,7 +173,7 @@ export function LoginForm({
         <div className="text-center text-sm">
           <button
             onClick={() => setIsForgotPassword(false)}
-            className="text-zinc-300 hover:text-zinc-400 transition-colors duration-200 disabled:opacity-50"
+            className="dark:text-zinc-300 dark:hover:text-zinc-400 text-zinc-700 hover:text-zinc-500 transition-colors duration-200 disabled:opacity-50"
           >
             Back to login
           </button>
