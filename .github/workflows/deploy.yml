@@ -2,7 +2,7 @@ name: EDCRM Deployment
 
 on:
   push:
-    branches: [feature/deployment-v3]
+    branches: [main]
   workflow_dispatch:
 
 env:
