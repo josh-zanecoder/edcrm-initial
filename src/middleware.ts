@@ -13,7 +13,8 @@ export function middleware(request: NextRequest) {
     '/api/auth/verify', 
     '/api/twilio/voice',
     '/api/twilio/call-status',
-    '/api/twilio/recording-status'
+    '/api/twilio/recording-status',
+    '/api/health'
   ];
   if (publicPaths.includes(pathname)) {
     return NextResponse.next();
@@ -52,6 +53,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/health).*)',
   ],
 };
