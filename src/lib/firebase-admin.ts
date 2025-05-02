@@ -1,6 +1,6 @@
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
+import { initializeApp, getApps, cert } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
 
 // Initialize Firebase Admin if not already initialized
 if (!getApps().length) {
@@ -10,12 +10,12 @@ if (!getApps().length) {
     const privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
     if (!projectId || !clientEmail || !privateKey) {
-      console.error('Missing Firebase Admin configuration:', {
+      console.error("Missing Firebase Admin configuration:", {
         hasProjectId: !!projectId,
         hasClientEmail: !!clientEmail,
-        hasPrivateKey: !!privateKey
+        hasPrivateKey: !!privateKey,
       });
-      throw new Error('Missing Firebase Admin configuration');
+      throw new Error("Missing Firebase Admin configuration");
     }
 
     // Initialize Firebase Admin
@@ -23,15 +23,15 @@ if (!getApps().length) {
       credential: cert({
         projectId,
         clientEmail,
-        privateKey: privateKey.replace(/\\n/g, '\n'),
+        privateKey: privateKey.replace(/\\n/g, "\n"),
       }),
     });
-    console.log('Firebase Admin initialized successfully');
+    console.log("Firebase Admin initialized successfully");
   } catch (error) {
-    console.error('Error initializing Firebase Admin:', error);
+    console.error("Error initializing Firebase Admin:", error);
     throw error;
   }
 }
 
-export const adminAuth = getAuth(); 
+export const adminAuth = getAuth();
 export const db = getFirestore();

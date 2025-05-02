@@ -7,12 +7,14 @@ import { LoginForm } from "@/components/login-form";
 import { toast } from "sonner";
 import { getFirebaseAuthErrorMessage } from "@/lib/firebaseErrors";
 import { ThemeToggle } from "@/components/theme-toggle";
+import Loader from "@/components/ui/loader";
 // import toast from "react-hot-toast";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -62,6 +64,7 @@ export default function LoginPage() {
         return;
       }
       await login({ email, password });
+      setIsRedirecting(true);
       toast.success("Successfully signed in!");
     } catch (error: any) {
       console.log(error);
@@ -76,6 +79,7 @@ export default function LoginPage() {
   return (
     <>
       <div className="relative flex min-h-screen flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
+        {isRedirecting && <Loader message="Redirecting..." size="md" />}
         {/* Dark Mode Toggle */}
         <div className="absolute right-20 top-12 z-10">
           <ThemeToggle />
