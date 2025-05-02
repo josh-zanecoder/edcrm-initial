@@ -31,7 +31,7 @@ export function CollegeSwitcher({
     logo: React.ElementType;
   }[];
 }) {
-  const { isMobile } = useSidebar();
+  const { isMobile, setOpenMobile } = useSidebar();
   const pathname = usePathname();
 
   // Find active college based on URL
@@ -90,6 +90,7 @@ export function CollegeSwitcher({
                 <Link
                   key={college.id}
                   href={`/salesperson/prospects/${college.id}/details`}
+                  onClick={() => isMobile && setOpenMobile(false)}
                 >
                   <DropdownMenuItem className="gap-2 p-2">
                     <div className="flex size-6 items-center justify-center rounded-md border">
