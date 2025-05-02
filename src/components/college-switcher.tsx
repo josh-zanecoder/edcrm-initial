@@ -73,44 +73,46 @@ export function CollegeSwitcher({
                 </span>
                 <span className="truncate text-xs">{currentCollege.email}</span>
               </div>
-              <ChevronsUpDown className="ml-auto" />
+              {colleges.length > 0 && <ChevronsUpDown className="ml-auto" />}
             </SidebarMenuButton>
           </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-            align="start"
-            side={isMobile ? "bottom" : "right"}
-            sideOffset={4}
-          >
-            <DropdownMenuLabel className="text-muted-foreground text-xs">
-              Colleges
-            </DropdownMenuLabel>
-            {colleges.map((college, index) => (
-              <Link
-                key={college.id}
-                href={`/salesperson/prospects/${college.id}/details`}
-              >
+          {colleges.length > 0 && (
+            <DropdownMenuContent
+              className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+              align="start"
+              side={isMobile ? "bottom" : "right"}
+              sideOffset={4}
+            >
+              <DropdownMenuLabel className="text-muted-foreground text-xs">
+                Colleges
+              </DropdownMenuLabel>
+              {colleges.map((college, index) => (
+                <Link
+                  key={college.id}
+                  href={`/salesperson/prospects/${college.id}/details`}
+                >
+                  <DropdownMenuItem className="gap-2 p-2">
+                    <div className="flex size-6 items-center justify-center rounded-md border">
+                      <college.logo className="size-3.5 shrink-0" />
+                    </div>
+                    {college.name}
+                    <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                </Link>
+              ))}
+              <DropdownMenuSeparator />
+              <Link href="/salesperson/prospects">
                 <DropdownMenuItem className="gap-2 p-2">
-                  <div className="flex size-6 items-center justify-center rounded-md border">
-                    <college.logo className="size-3.5 shrink-0" />
+                  <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+                    <Plus className="size-4" />
                   </div>
-                  {college.name}
-                  <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+                  <div className="text-muted-foreground font-medium">
+                    Add college
+                  </div>
                 </DropdownMenuItem>
               </Link>
-            ))}
-            <DropdownMenuSeparator />
-            <Link href="/salesperson/prospects">
-              <DropdownMenuItem className="gap-2 p-2">
-                <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
-                  <Plus className="size-4" />
-                </div>
-                <div className="text-muted-foreground font-medium">
-                  Add college
-                </div>
-              </DropdownMenuItem>
-            </Link>
-          </DropdownMenuContent>
+            </DropdownMenuContent>
+          )}
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
