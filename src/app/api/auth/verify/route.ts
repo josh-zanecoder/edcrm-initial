@@ -52,6 +52,8 @@ export async function POST(request: Request) {
         uid: decodedToken.uid,
         email: decodedToken.email,
         displayName: user.displayName || decodedToken.email?.split("@")[0],
+        firstName: salesperson?.first_name || null,
+        lastName: salesperson?.last_name || null,
         token: token,
         twilioNumber: salesperson?.twilio_number || null,
         id: salesperson?._id || null,

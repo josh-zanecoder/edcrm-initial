@@ -76,7 +76,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         const userData = userDataResponse.data.userData;
         const colleges = collegesResponse.data.colleges;
 
-        defaultUser.name = userData.displayName;
+        defaultUser.name =
+          userData.firstName + " " + userData.lastName || userData.displayName;
         defaultUser.email = userData.email;
         defaultUser.avatar = userData.avatar;
 
