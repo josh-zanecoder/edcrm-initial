@@ -12,11 +12,10 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import axios from "axios";
+import { useUserStore } from "@/store/useUserStore";
 import { useEffect, useState } from "react";
 import { SidebarData } from "@/types/sidebar";
 import { SidebarSkeleton } from "@/components/ui/sidebar-skeleton";
-
 const salesPersonNavItems = [
   {
     title: "Dashboard",
@@ -58,6 +57,7 @@ const defaultUser = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { userRole, colleges, userData, getUser } = useUserStore();
   const [data, setData] = useState<SidebarData>({
     user: defaultUser,
     navMain: salesPersonNavItems || adminNavItems,
@@ -65,37 +65,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
+    getUser();
+  }, [getUser]);
+
+  useEffect(() => {
+    const updateSidebarData = async () => {
       try {
-        const [userDataResponse, collegesResponse] = await Promise.all([
-          axios.get("/api/auth/authenticated"),
-          axios.get("/api/colleges"),
-        ]);
-
-        const userRole = userDataResponse.data.userData.role;
-        const userData = userDataResponse.data.userData;
-        const colleges = collegesResponse.data.colleges;
-
-        if (userData.firstName && userData.lastName) {
-          defaultUser.name = userData.firstName + " " + userData.lastName;
-        } else if (userData.firstName) {
-          defaultUser.name = userData.firstName;
-        } else if (userData.lastName) {
-          defaultUser.name = userData.lastName;
-        } else {
-          defaultUser.name = userData.displayName;
-        }
-
-        defaultUser.email = userData.email;
-        defaultUser.avatar = userData.avatar;
-
-        console.log("colleges", colleges);
-        console.log("userRole", userRole);
-        console.log("userData", userData);
+        const updatedUser = {
+          name:
+            userData?.firstName && userData?.lastName
+              ? `${userData.firstName} ${userData.lastName}`
+              : userData?.firstName ||
+                userData?.lastName ||
+                userData?.displayName ||
+                defaultUser.name,
+          email: userData?.email || defaultUser.email,
+          avatar: userData?.avatar || defaultUser.avatar,
+        };
 
         if (userRole === "salesperson") {
           setData({
-            user: defaultUser,
+            user: updatedUser,
             colleges: colleges.map((college: any) => ({
               id: college.id,
               name: college.name,
@@ -106,13 +96,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           });
         } else if (userRole === "admin") {
           setData({
-            user: defaultUser,
+            user: updatedUser,
             navMain: adminNavItems,
+          });
+        } else {
+          setData({
+            user: updatedUser,
+            navMain: defaultNavItems,
           });
         }
       } catch (error) {
         console.error("Error fetching sidebar data:", error);
-        // Fallback to default data
         setData({
           user: defaultUser,
           navMain: defaultNavItems,
@@ -122,8 +116,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       }
     };
 
-    fetchData();
-  }, []);
+    updateSidebarData();
+  }, [userRole, colleges, userData]);
 
   if (loading) {
     return <SidebarSkeleton />;
