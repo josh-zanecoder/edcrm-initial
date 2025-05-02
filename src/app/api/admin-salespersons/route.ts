@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import mongoose from 'mongoose';
+import { SalesPersonModel } from '@/models/SalesPerson';
+import connectToMongoDB from '@/lib/mongoose';
 
 export async function GET() {
   try {
-    const client = await clientPromise;
-    const db = client.db();
+    await connectToMongoDB();
 
-    const salespersons = await db
-      .collection('salespersons')
+    const salespersons = await SalesPersonModel
       .find({})
       .sort({ createdAt: -1 })
-      .toArray();
+      .lean();
 
     return NextResponse.json(
       salespersons.map(person => ({
@@ -26,4 +26,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-} 
+}
