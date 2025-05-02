@@ -1,26 +1,18 @@
 "use client";
 
-<<<<<<< HEAD
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
-import { Prospect } from '@/types/prospect';
-import AddProspectModal from '@/components/salesperson/AddProspectModal';
-import { formatAddress, formatPhoneNumber, formatWebsite } from '@/utils/formatters';
-import { useCallStore } from '@/store/useCallStore';
-import { useDebouncedCallback } from 'use-debounce';
-import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-=======
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { Prospect } from "@/types/prospect";
 import AddProspectModal from "@/components/salesperson/AddProspectModal";
-import { formatAddress, formatWebsite } from "@/utils/formatters";
+import {
+  formatAddress,
+  formatPhoneNumber,
+  formatWebsite,
+} from "@/utils/formatters";
 import { useCallStore } from "@/store/useCallStore";
 import { useDebouncedCallback } from "use-debounce";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
->>>>>>> 744b7af ([FE] Redesign Navigation UI)
 
 // Utility function to remove special characters from phone number
 const unformatPhoneNumber = (phone: string) => {
