@@ -1,33 +1,46 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import SalespersonSidebar from '@/components/salesperson/SalespersonSidebar';
-import SalespersonNavbar from '@/components/salesperson/SalespersonNavbar';
-
-
+import { useState } from "react";
+import SalespersonSidebar from "@/components/salesperson/SalespersonSidebar";
+import SalespersonNavbar from "@/components/salesperson/SalespersonNavbar";
+import { Clock } from "@/components/clock";
+import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Separator } from "@/components/ui/separator";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { SiteHeader } from "@/components/site-header";
 export default function SalespersonLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
- 
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <SalespersonSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      
-      <div className="lg:pl-64 flex flex-col flex-1">
-        <SalespersonNavbar onMenuClick={() => setSidebarOpen(true)} />
-        
-        <main className="flex-1">
-          <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <SidebarProvider>
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader />
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               {children}
             </div>
           </div>
-        </main>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
-} 
+}
