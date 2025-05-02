@@ -5,25 +5,11 @@ import mongoose from 'mongoose';
 import connectDB from '@/lib/mongoose';
 import Prospect from '@/models/Prospect';
 
-const getCookies = async () => {
-  const cookieStore = await cookies();
-  return {
-    userCookie: cookieStore.get('user'),
-    tokenCookie: cookieStore.get('token')
-  };
-};
-
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userCookie, tokenCookie } = await getCookies();
-
-    if (!userCookie?.value || !tokenCookie?.value) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
     const { id } = await context.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -48,17 +34,12 @@ export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await context.params;
-
   try {
-    const userCookie = request.cookies.get('user')?.value;
-    const tokenCookie = request.cookies.get('token')?.value;
+    const { id } = await context.params;
+    const cookieStore = await cookies();
+    const userCookie = cookieStore.get('user')?.value;
 
-    if (!userCookie || !tokenCookie) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userData = JSON.parse(userCookie);
+    const userData = JSON.parse(userCookie || '{}');
     const updatedData = await request.json();
 
     // Phone formatting
@@ -66,7 +47,7 @@ export async function PUT(
       updatedData.phone = unformatPhoneNumber(updatedData.phone);
     }
 
-    // Basic validations (email, website, etc.)
+    // validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const websiteRegex = /^https?:\/\/.+/;
 
@@ -90,8 +71,6 @@ export async function PUT(
 
     const userInfo = {
       id: userData.uid,
-      firstName: userData.first_name,
-      lastName: userData.last_name,
       email: userData.email,
       role: userData.role
     };

@@ -3,16 +3,8 @@ import { cookies } from 'next/headers';
 import mongoose from 'mongoose';
 import connectToMongoDB from '@/lib/mongoose';
 import Reminder from '@/models/Reminder';
-
 import { ReminderType, ReminderStatus } from '@/types/reminder';
 
-const getCookies = async () => {
-  const cookieStore = await cookies();
-  return {
-    userCookie: cookieStore.get('user'),
-    tokenCookie: cookieStore.get('token')
-  };
-};
 
 // PUT /api/prospects/[id]/reminders/[reminderId]
 export async function PUT(
@@ -21,11 +13,7 @@ export async function PUT(
 ) {
   try {
     await connectToMongoDB();
-    const { userCookie, tokenCookie } = await getCookies();
 
-    if (!userCookie?.value || !tokenCookie?.value) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
 
     const { id, reminderId } = await context.params;
     const body = await request.json();
@@ -89,11 +77,7 @@ export async function DELETE(
 ) {
   try {
     await connectToMongoDB();
-    const { userCookie, tokenCookie } = await getCookies();
 
-    if (!userCookie?.value || !tokenCookie?.value) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
 
     const { id, reminderId } = await context.params;
 

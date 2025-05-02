@@ -7,13 +7,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const userCookie = request.cookies.get('user')?.value;
-    const tokenCookie = request.cookies.get('token')?.value;
+   
 
-    if (!userCookie || !tokenCookie) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userData = JSON.parse(userCookie);
+    const userData = JSON.parse(userCookie || '');
 
     if (!ObjectId.isValid(userData.id)) {
       return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });

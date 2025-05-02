@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
-
+import connectToMongoDB from '@/lib/mongoose';
+import Prospect from '@/models/Prospect';
+import mongoose from 'mongoose';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    await connectToMongoDB();
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '5');
@@ -19,61 +22,47 @@ export async function GET(request: NextRequest) {
     }
 
     const userData = JSON.parse(userCookie);
-    
-    const client = await clientPromise;
-    const db = client.db();
-    const prospects = db.collection('prospects');
 
-    // Build search query
+    const baseQuery = { 'assignedTo.id': userData.uid };
+
     const searchQuery = search
       ? {
-          $and: [
-            { 'assignedTo.id': userData.uid },
-            {
-              $or: [
-                { collegeName: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } },
-                { phone: { $regex: search, $options: 'i' } },
-                { 'address.city': { $regex: search, $options: 'i' } },
-                { 'address.state': { $regex: search, $options: 'i' } },
-                { county: { $regex: search, $options: 'i' } }
-              ]
-            }
+          ...baseQuery,
+          $or: [
+            { collegeName: { $regex: search, $options: 'i' } },
+            { email: { $regex: search, $options: 'i' } },
+            { phone: { $regex: search, $options: 'i' } },
+            { 'address.city': { $regex: search, $options: 'i' } },
+            { 'address.state': { $regex: search, $options: 'i' } },
+            { county: { $regex: search, $options: 'i' } }
           ]
         }
-      : { 'assignedTo.id': userData.uid };
+      : baseQuery;
 
-    // Get total count with search query
-    const totalCount = await prospects.countDocuments(searchQuery);
+    const totalCount = await Prospect.countDocuments(searchQuery);
 
-    // Get paginated prospects with search query
-    const prospectsList = await prospects.find(searchQuery)
+    const prospectsList = await Prospect.find(searchQuery)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .toArray();
-    
-    // Transform prospects
+      .lean();
+
     const formattedProspects = prospectsList.map(prospect => ({
       ...prospect,
-      id: prospect._id.toString(),
+      id: (prospect._id as mongoose.Types.ObjectId).toString(),
       _id: undefined,
       assignedTo: prospect.assignedTo || {
         id: userData.uid,
-        firstName: userData.first_name,
-        lastName: userData.last_name,
         email: userData.email,
         role: userData.role
       },
       addedBy: prospect.addedBy || {
         id: userData.uid,
-        firstName: userData.first_name,
-        lastName: userData.last_name,
         email: userData.email,
         role: userData.role
       }
     }));
-    
+
     return NextResponse.json({
       prospects: formattedProspects,
       totalCount,

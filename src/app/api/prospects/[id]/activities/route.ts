@@ -6,12 +6,9 @@ import Activity from '@/models/Activity';
 import Prospect from '@/models/Prospect';
 import { ActivityType, ActivityStatus } from '@/types/activity';
 
-const getCookies = async () => {
+const getUserCookie = async () => {
   const cookieStore = await cookies();
-  return {
-    userCookie: cookieStore.get('user'),
-    tokenCookie: cookieStore.get('token')
-  };
+  return cookieStore.get('user');
 };
 
 // GET /api/prospects/[id]/activities
@@ -21,12 +18,6 @@ export async function GET(
 ) {
   try {
     await connectToMongoDB();
-    const { userCookie, tokenCookie } = await getCookies();
-
-    if (!userCookie?.value || !tokenCookie?.value) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
     const { id } = await context.params;
 
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
@@ -43,15 +34,13 @@ export async function GET(
     const formattedActivities = activities.map(activity => ({
       ...activity,
       _id: (activity._id as mongoose.Types.ObjectId).toString(),
-      prospectId: activity.prospectId ? (activity.prospectId as mongoose.Types.ObjectId).toString() : null,
-      addedBy: activity.addedBy ? (activity.addedBy as mongoose.Types.ObjectId).toString() : null,
+      prospectId: activity.prospectId?.toString() || null,
+      addedBy: activity.addedBy?.toString() || null,
       dueDate: activity.dueDate ? new Date(activity.dueDate).toISOString() : null,
       completedAt: activity.completedAt ? new Date(activity.completedAt).toISOString() : null,
-      createdAt: activity.createdAt ? new Date(activity.createdAt).toISOString() : null,
-      updatedAt: activity.updatedAt ? new Date(activity.updatedAt).toISOString() : null
+      createdAt: activity.createdAt?.toISOString() || null,
+      updatedAt: activity.updatedAt?.toISOString() || null
     }));
-    
-    
 
     return NextResponse.json(formattedActivities);
   } catch (error) {
@@ -67,11 +56,7 @@ export async function POST(
 ) {
   try {
     await connectToMongoDB();
-    const { userCookie, tokenCookie } = await getCookies();
-
-    if (!userCookie?.value || !tokenCookie?.value) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
+    const userCookie = await getUserCookie();
 
     const { id } = await context.params;
     const body = await request.json();
@@ -94,7 +79,7 @@ export async function POST(
 
     let userId: string;
     try {
-      const userData = JSON.parse(userCookie.value);
+      const userData = JSON.parse(userCookie?.value || '');
       userId = userData.id;
     } catch (err) {
       console.error('Invalid user cookie:', err);

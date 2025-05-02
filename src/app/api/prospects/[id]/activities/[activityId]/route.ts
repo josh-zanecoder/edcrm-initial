@@ -5,14 +5,7 @@ import connectToMongoDB from '@/lib/mongoose';
 import Activity from '@/models/Activity';
 import { ActivityStatus, ActivityType } from '@/types/activity';
 
-// Helpers
-const getCookies = async () => {
-  const cookieStore = await cookies();
-  return {
-    userCookie: cookieStore.get('user'),
-    tokenCookie: cookieStore.get('token')
-  };
-};
+
 
 // PUT /api/prospects/[id]/activities/[activityId]
 export async function PUT(
@@ -21,11 +14,7 @@ export async function PUT(
 ) {
   try {
     await connectToMongoDB();
-    const { userCookie, tokenCookie } = await getCookies();
 
-    if (!userCookie?.value || !tokenCookie?.value) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
 
     const { id, activityId } = await context.params;
     const body = await request.json();
@@ -52,7 +41,6 @@ export async function PUT(
       return NextResponse.json({ error: 'Activity not found' }, { status: 404 });
     }
 
-    // Apply updates
     const allowedUpdates = ['title', 'description', 'type', 'status', 'dueDate'];
     for (const key of allowedUpdates) {
       if (body[key] !== undefined) {
@@ -63,7 +51,16 @@ export async function PUT(
     activity.updatedAt = new Date();
 
     const updatedActivity = await activity.save();
-    return NextResponse.json(updatedActivity.toObject());
+    return NextResponse.json({
+      ...updatedActivity.toObject(),
+      _id: updatedActivity._id.toString(),
+      prospectId: updatedActivity.prospectId.toString(),
+      addedBy: updatedActivity.addedBy?.toString() || null,
+      dueDate: updatedActivity.dueDate?.toISOString() || null,
+      completedAt: updatedActivity.completedAt?.toISOString() || null,
+      createdAt: updatedActivity.createdAt.toISOString(),
+      updatedAt: updatedActivity.updatedAt.toISOString()
+    });
   } catch (error) {
     console.error('Error updating activity:', error);
     return NextResponse.json({ error: 'Failed to update activity' }, { status: 500 });
@@ -77,12 +74,6 @@ export async function DELETE(
 ) {
   try {
     await connectToMongoDB();
-    const { userCookie, tokenCookie } = await getCookies();
-
-    if (!userCookie?.value || !tokenCookie?.value) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
     const { id, activityId } = await context.params;
 
     if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(activityId)) {
@@ -90,7 +81,7 @@ export async function DELETE(
     }
 
     const activity = await Activity.findOneAndUpdate(
-      { _id: activityId, prospectId: id },
+      { _id: activityId, prospectId: id, isActive: true },
       { isActive: false, updatedAt: new Date() },
       { new: true }
     );

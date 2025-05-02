@@ -22,11 +22,7 @@ export async function GET(
 ) {
   try {
     await connectToMongoDB();
-    const { userCookie, tokenCookie } = await getCookies();
 
-    if (!userCookie?.value || !tokenCookie?.value) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
 
     const { id } = await context.params;
 
@@ -70,11 +66,8 @@ export async function POST(
 ) {
   try {
     await connectToMongoDB();
-    const { userCookie, tokenCookie } = await getCookies();
+    const userCookie = await getCookies();
 
-    if (!userCookie?.value || !tokenCookie?.value) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
 
     const { id } = await context.params;
     const body = await request.json();
@@ -98,7 +91,7 @@ export async function POST(
     // Parse the user ID
     let userId: string;
     try {
-      const userData = JSON.parse(userCookie.value);
+      const userData = JSON.parse(userCookie?.userCookie?.value || '');
       userId = userData.id;
     } catch (err) {
       console.error('Invalid user cookie:', err);
