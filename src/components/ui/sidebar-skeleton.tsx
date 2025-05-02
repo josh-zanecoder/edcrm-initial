@@ -9,7 +9,7 @@ import {
 
 export function SidebarSkeleton() {
   return (
-    <Sidebar>
+    <Sidebar variant="inset">
       <SidebarHeader>
         <div className="flex items-center gap-2 p-2">
           <Skeleton className="h-8 w-8 rounded-lg" />
