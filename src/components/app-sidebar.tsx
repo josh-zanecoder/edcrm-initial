@@ -76,8 +76,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         const userData = userDataResponse.data.userData;
         const colleges = collegesResponse.data.colleges;
 
-        defaultUser.name =
-          userData.firstName + " " + userData.lastName || userData.displayName;
+        if (userData.firstName && userData.lastName) {
+          defaultUser.name = userData.firstName + " " + userData.lastName;
+        } else if (userData.firstName) {
+          defaultUser.name = userData.firstName;
+        } else if (userData.lastName) {
+          defaultUser.name = userData.lastName;
+        } else {
+          defaultUser.name = userData.displayName;
+        }
+
         defaultUser.email = userData.email;
         defaultUser.avatar = userData.avatar;
 
