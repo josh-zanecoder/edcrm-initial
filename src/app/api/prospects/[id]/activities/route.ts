@@ -1,151 +1,124 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import clientPromise from '@/lib/mongodb';
-import { ObjectId } from 'mongodb';
+import mongoose from 'mongoose';
+import connectToMongoDB from '@/lib/mongoose';
+import Activity from '@/models/Activity';
+import Prospect from '@/models/Prospect';
 import { ActivityType, ActivityStatus } from '@/types/activity';
 
-const getCookies = async () => {
+const getUserCookie = async () => {
   const cookieStore = await cookies();
-  return {
-    userCookie: cookieStore.get('user'),
-    tokenCookie: cookieStore.get('token')
-  };
+  return cookieStore.get('user');
 };
 
-// GET /api/prospects/[id]/activities - Get all activities for a prospect
+// GET /api/prospects/[id]/activities
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userCookie, tokenCookie } = await getCookies();
-
-    if (!userCookie?.value || !tokenCookie?.value) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
+    await connectToMongoDB();
     const { id } = await context.params;
 
-    if (!id || !ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { error: 'Invalid prospect ID' },
-        { status: 400 }
-      );
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'Invalid prospect ID' }, { status: 400 });
     }
 
-    const client = await clientPromise;
-    const db = client.db();
-    const activities = db.collection('activities');
+    const prospectExists = await Prospect.exists({ _id: id });
+    if (!prospectExists) {
+      return NextResponse.json({ error: 'Prospect not found' }, { status: 404 });
+    }
 
-    // Get all active activities for this prospect
-    const activitiesList = await activities
-      .find({
-        prospectId: new ObjectId(id),
-        isActive: true
-      })
-      .toArray();
+    const activities = await Activity.find({ prospectId: id, isActive: true }).lean();
 
-    return NextResponse.json(activitiesList);
+    const formattedActivities = activities.map(activity => ({
+      ...activity,
+      _id: (activity._id as mongoose.Types.ObjectId).toString(),
+      prospectId: activity.prospectId?.toString() || null,
+      addedBy: activity.addedBy?.toString() || null,
+      dueDate: activity.dueDate ? new Date(activity.dueDate).toISOString() : null,
+      completedAt: activity.completedAt ? new Date(activity.completedAt).toISOString() : null,
+      createdAt: activity.createdAt?.toISOString() || null,
+      updatedAt: activity.updatedAt?.toISOString() || null
+    }));
+
+    return NextResponse.json(formattedActivities);
   } catch (error) {
     console.error('Error fetching activities:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch activities' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch activities' }, { status: 500 });
   }
 }
 
-// POST /api/prospects/[id]/activities - Create a new activity
+// POST /api/prospects/[id]/activities
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userCookie, tokenCookie } = await getCookies();
-
-    if (!userCookie?.value || !tokenCookie?.value) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    await connectToMongoDB();
+    const userCookie = await getUserCookie();
 
     const { id } = await context.params;
     const body = await request.json();
 
-    if (!id || !ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { error: 'Invalid prospect ID' },
-        { status: 400 }
-      );
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'Invalid prospect ID' }, { status: 400 });
     }
 
-    // Validate required fields
     if (!body.title || !body.description || !body.type || !body.status || !body.dueDate) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Validate activity type
     if (!Object.values(ActivityType).includes(body.type)) {
-      return NextResponse.json(
-        { error: 'Invalid activity type' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid activity type' }, { status: 400 });
     }
 
-    // Validate status
     if (!Object.values(ActivityStatus).includes(body.status)) {
-      return NextResponse.json(
-        { error: 'Invalid activity status' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid activity status' }, { status: 400 });
     }
 
-    const client = await clientPromise;
-    const db = client.db();
-    const activities = db.collection('activities');
+    let userId: string;
+    try {
+      const userData = JSON.parse(userCookie?.value || '');
+      userId = userData.id;
+    } catch (err) {
+      console.error('Invalid user cookie:', err);
+      return NextResponse.json({ error: 'Invalid user data in cookie' }, { status: 400 });
+    }
 
-    const user = JSON.parse(userCookie.value);
-    const newActivity = {
-      ...body,
-      prospectId: new ObjectId(id),
+    const prospectExists = await Prospect.exists({ _id: id });
+    if (!prospectExists) {
+      return NextResponse.json({ error: 'Prospect not found' }, { status: 404 });
+    }
+
+    const activity = new Activity({
+      prospectId: id,
+      title: body.title,
+      description: body.description,
+      type: body.type,
+      status: body.status,
       dueDate: new Date(body.dueDate),
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      completedAt: body.completedAt ? new Date(body.completedAt) : null,
       isActive: true,
-      addedBy: new ObjectId(user._id)
+      addedBy: userId
+    });
+
+    const saved = await activity.save();
+
+    const formatted = {
+      ...saved.toObject(),
+      _id: saved._id.toString(),
+      prospectId: saved.prospectId.toString(),
+      addedBy: saved.addedBy.toString(),
+      dueDate: saved.dueDate.toISOString(),
+      completedAt: saved.completedAt?.toISOString() || null,
+      createdAt: saved.createdAt.toISOString(),
+      updatedAt: saved.updatedAt.toISOString()
     };
 
-    const result = await activities.insertOne(newActivity);
-
-    if (!result.insertedId) {
-      return NextResponse.json(
-        { error: 'Failed to create activity' },
-        { status: 500 }
-      );
-    }
-
-    const createdActivity = await activities.findOne({ _id: result.insertedId });
-
-    if (!createdActivity) {
-      return NextResponse.json(
-        { error: 'Failed to fetch created activity' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json(createdActivity);
+    return NextResponse.json(formatted, { status: 201 });
   } catch (error) {
     console.error('Error creating activity:', error);
-    return NextResponse.json(
-      { error: 'Failed to create activity' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to create activity' }, { status: 500 });
   }
-} 
+}

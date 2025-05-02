@@ -23,28 +23,14 @@ const client = new MongoClient(uri, options);
 
 const clientPromise = client.connect()
   .then((connectedClient) => {
-    console.log('✅ MongoDB connected successfully');
-
-    connectedClient.on('commandStarted', (event) => {
-      console.log('🚀 MongoDB Command Started:', {
-        command: event.commandName,
-        database: event.databaseName,
-        commandObj: event.command,
-      });
-    });
+    
 
     connectedClient.on('commandSucceeded', (event) => {
-      console.log('✅ MongoDB Command Succeeded:', {
-        command: event.commandName,
-        duration: event.duration,
-      });
+      
     });
 
     connectedClient.on('commandFailed', (event) => {
-      console.error('❌ MongoDB Command Failed:', {
-        command: event.commandName,
-        failure: event.failure,
-      });
+     
     });
 
     return connectedClient;

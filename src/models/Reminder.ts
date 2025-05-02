@@ -1,9 +1,9 @@
-import { Schema, model } from 'mongoose';
+import mongoose from 'mongoose';
 import { ReminderType, ReminderStatus } from '@/types/reminder';
 
-const reminderSchema = new Schema({
+const reminderSchema = new mongoose.Schema({
   prospectId: {
-    type: Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'Prospect',
     required: true
   },
@@ -38,25 +38,17 @@ const reminderSchema = new Schema({
     type: Boolean,
     default: true
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  },
   addedBy: {
-    type: Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   }
-});
+}, { timestamps: true });
 
-// Update the updatedAt field before saving
-reminderSchema.pre('save', function(next) {
+// Middleware to update `updatedAt`
+reminderSchema.pre('save', function (next) {
   this.updatedAt = new Date();
   next();
 });
 
-export default model('Reminder', reminderSchema); 
+export default mongoose.models.Reminder || mongoose.model('Reminder', reminderSchema);
