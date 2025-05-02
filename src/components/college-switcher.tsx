@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { ChevronsUpDown, Plus } from "lucide-react";
+import { ChevronsUpDown, Plus, Command } from "lucide-react";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 import {
   DropdownMenu,
@@ -23,17 +25,35 @@ export function CollegeSwitcher({
   colleges,
 }: {
   colleges: {
+    id: string;
     name: string;
     email: string;
     logo: React.ElementType;
   }[];
 }) {
   const { isMobile } = useSidebar();
-  const [activeCollege, setActiveCollege] = React.useState(colleges[0]);
+  const pathname = usePathname();
 
-  if (!activeCollege) {
-    return null;
-  }
+  // Find active college based on URL
+  const activeCollege = React.useMemo(() => {
+    const pathParts = pathname.split("/");
+    const isCollegeDetailsPage =
+      pathParts.includes("prospects") && pathParts.includes("details");
+    if (!isCollegeDetailsPage) return null;
+
+    const collegeIdIndex = pathParts.indexOf("prospects") + 1;
+    const collegeId = pathParts[collegeIdIndex];
+    return colleges.find((c) => c.id === collegeId) || null;
+  }, [pathname, colleges]);
+
+  const defaultCollege = {
+    id: "",
+    name: "EdTracts",
+    email: "System",
+    logo: Command,
+  };
+
+  const currentCollege = activeCollege || defaultCollege;
 
   return (
     <SidebarMenu>
@@ -45,13 +65,13 @@ export function CollegeSwitcher({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                <activeCollege.logo className="size-4" />
+                <currentCollege.logo className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">
-                  {activeCollege.name}
+                  {currentCollege.name}
                 </span>
-                <span className="truncate text-xs">{activeCollege.email}</span>
+                <span className="truncate text-xs">{currentCollege.email}</span>
               </div>
               <ChevronsUpDown className="ml-auto" />
             </SidebarMenuButton>
@@ -66,20 +86,21 @@ export function CollegeSwitcher({
               Colleges
             </DropdownMenuLabel>
             {colleges.map((college, index) => (
-              <DropdownMenuItem
-                key={college.name}
-                onClick={() => setActiveCollege(college)}
-                className="gap-2 p-2"
+              <Link
+                key={college.id}
+                href={`/salesperson/prospects/${college.id}/details`}
               >
-                <div className="flex size-6 items-center justify-center rounded-md border">
-                  <college.logo className="size-3.5 shrink-0" />
-                </div>
-                {college.name}
-                <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
-              </DropdownMenuItem>
+                <DropdownMenuItem className="gap-2 p-2">
+                  <div className="flex size-6 items-center justify-center rounded-md border">
+                    <college.logo className="size-3.5 shrink-0" />
+                  </div>
+                  {college.name}
+                  <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+                </DropdownMenuItem>
+              </Link>
             ))}
             <DropdownMenuSeparator />
-            <a href="/salesperson/prospects">
+            <Link href="/salesperson/prospects">
               <DropdownMenuItem className="gap-2 p-2">
                 <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
                   <Plus className="size-4" />
@@ -88,7 +109,7 @@ export function CollegeSwitcher({
                   Add college
                 </div>
               </DropdownMenuItem>
-            </a>
+            </Link>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
