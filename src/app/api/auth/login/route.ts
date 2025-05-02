@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import clientPromise from "@/lib/mongodb";
+import connectToMongoDB from "@/lib/mongoose";
+import { UserModel } from "@/models/User";
+import { SalesPersonModel } from "@/models/SalesPerson";  // Already defined SalesPerson model
 
 export async function POST(request: Request) {
   try {
@@ -23,16 +25,12 @@ export async function POST(request: Request) {
       const user = userCredential.user;
       const token = await user.getIdToken();
 
-      // Get MongoDB client
-      const client = await clientPromise;
-      const db = client.db();
+      // Connect to MongoDB via Mongoose
+      await connectToMongoDB();
 
-      // Check if user exists in users collection
-      const userRecord = await db.collection("users").findOne({
-        firebase_uid: user.uid,
-      });
+      // Find user in MongoDB
+      const userRecord = await UserModel.findOne({ firebase_uid: user.uid });
 
-      // If user doesn't exist in MongoDB, deny access
       if (!userRecord) {
         return NextResponse.json(
           { error: "User not authorized. Please contact administrator." },
@@ -43,12 +41,9 @@ export async function POST(request: Request) {
       // Get additional user data from salespersons collection if needed
       const salesperson =
         userRecord.role === "salesperson"
-          ? await db
-              .collection("salespersons")
-              .findOne({ firebase_uid: user.uid })
+          ? await SalesPersonModel.findOne({ firebase_uid: user.uid })
           : null;
 
-      // Create a session with the user data
       const session = {
         uid: user.uid,
         email: user.email,
