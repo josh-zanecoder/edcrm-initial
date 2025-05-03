@@ -526,82 +526,110 @@ export const useCallStore = create<CallState>((set, get) => ({
         
         if (callSid) {
           console.log('Setting up Firebase listener for call:', callSid);
-          // Set up a listener for the call document
-          const unsubscribe = onSnapshot(
-            doc(collection(db, 'calls'), callSid),
-            (docSnapshot: DocumentSnapshot<DocumentData>) => {
-              console.log('Firebase listener triggered for call:', callSid);
-              console.log('Document exists:', docSnapshot.exists());
-              if (docSnapshot.exists()) {
-                const data = docSnapshot.data();
-                console.log('Call status data:', data);
-                if (data?.status === 'answered' || data?.status === 'in-progress') {
-                  console.log('Call is answered, starting timer');
-                  // Call is answered, start the timer
-                  const startTime = Date.now();
-                  const durationInterval = setInterval(() => {
-                    const duration = Math.floor((Date.now() - startTime) / 1000);
-                    set({ callDuration: duration });
-                  }, 1000);
+          
+          // Add retry mechanism for document not found
+          let retryCount = 0;
+          const maxRetries = 5;
+          const retryInterval = 1000; // 1 second
 
-                  set({ 
-                    currentCall: call, 
-                    callStartTime: startTime,
-                    callDurationInterval: durationInterval,
-                    isCallAnswered: true
-                  });
-                  
-                  // You can add additional logic here for when a call is answered
-                  // For example, playing a sound, showing a notification, etc.
-                } else if (data?.status === 'completed' || data?.status === 'failed' || data?.status === 'busy' || data?.status === 'no-answer' || data?.status === 'canceled') {
-                  console.log('Call ended with status:', data?.status);
-                  // Call ended, clear the timer
-                  const state = get();
-                  if (state.callDurationInterval) {
-                    clearInterval(state.callDurationInterval);
-                    set({ callDurationInterval: null });
+          const setupListener = () => {
+            // Set up a listener for the call document
+            const unsubscribe = onSnapshot(
+              doc(collection(db, 'calls'), callSid),
+              (docSnapshot: DocumentSnapshot<DocumentData>) => {
+                console.log('Firebase listener triggered for call:', callSid);
+                console.log('Document exists:', docSnapshot.exists());
+                if (docSnapshot.exists()) {
+                  const data = docSnapshot.data();
+                  console.log('Call status data:', data);
+                  if (data?.status === 'answered' || data?.status === 'in-progress') {
+                    console.log('Call is answered, starting timer');
+                    // Call is answered, start the timer
+                    const startTime = Date.now();
+                    const durationInterval = setInterval(() => {
+                      const duration = Math.floor((Date.now() - startTime) / 1000);
+                      set({ callDuration: duration });
+                    }, 1000);
+
+                    set({ 
+                      currentCall: call, 
+                      callStartTime: startTime,
+                      callDurationInterval: durationInterval,
+                      isCallAnswered: true
+                    });
+                  } else if (data?.status === 'completed' || data?.status === 'failed' || data?.status === 'busy' || data?.status === 'no-answer' || data?.status === 'canceled') {
+                    console.log('Call ended with status:', data?.status);
+                    // Call ended, clear the timer
+                    const state = get();
+                    if (state.callDurationInterval) {
+                      clearInterval(state.callDurationInterval);
+                      set({ callDurationInterval: null });
+                    }
+                    // Hide the dialer when call is completed
+                    set({ isCalling: false, isCallAnswered: false });
+                  } else {
+                    console.log('Call status update:', data?.status);
                   }
-                  // Hide the dialer when call is completed
-                  set({ isCalling: false, isCallAnswered: false });
                 } else {
-                  console.log('Call status update:', data?.status);
+                  console.log('No document found for call:', callSid, 'Retry count:', retryCount);
+                  if (retryCount < maxRetries) {
+                    retryCount++;
+                    console.log(`Retrying in ${retryInterval}ms (Attempt ${retryCount}/${maxRetries})`);
+                    setTimeout(() => {
+                      unsubscribe();
+                      setupListener();
+                    }, retryInterval);
+                  } else {
+                    console.log('Max retries reached, giving up on finding document');
+                  }
                 }
-              } else {
-                console.log('No document found for call:', callSid);
-                console.log('Checking Firestore path:', `calls/${callSid}`);
+              },
+              (error: Error) => {
+                console.error('Error in Firebase listener:', error);
+                console.error('Error details:', {
+                  message: error.message,
+                  stack: error.stack,
+                  callSid,
+                  retryCount
+                });
+                
+                // Retry on error if we haven't exceeded max retries
+                if (retryCount < maxRetries) {
+                  retryCount++;
+                  console.log(`Error occurred, retrying in ${retryInterval}ms (Attempt ${retryCount}/${maxRetries})`);
+                  setTimeout(() => {
+                    unsubscribe();
+                    setupListener();
+                  }, retryInterval);
+                }
               }
-            },
-            (error: Error) => {
-              console.error('Error in Firebase listener:', error);
-              console.error('Error details:', {
-                message: error.message,
-                stack: error.stack,
-                callSid
-              });
-            }
-          );
+            );
 
-          // Store the unsubscribe function to clean up later
-          call.on('disconnect', () => {
-            console.log('Call disconnected, cleaning up Firebase listener for call:', callSid);
-            unsubscribe();
-            
-            // Reset call state when call is disconnected
-            const state = get();
-            if (state.callDurationInterval) {
-              clearInterval(state.callDurationInterval);
-            }
-            
-            set({ 
-              isCalling: false, 
-              currentCall: null,
-              callStartTime: null,
-              callDuration: 0,
-              callDurationInterval: null,
-              isCallAnswered: false,
-              connectionError: null
+            // Store the unsubscribe function to clean up later
+            call.on('disconnect', () => {
+              console.log('Call disconnected, cleaning up Firebase listener for call:', callSid);
+              unsubscribe();
+              
+              // Reset call state when call is disconnected
+              const state = get();
+              if (state.callDurationInterval) {
+                clearInterval(state.callDurationInterval);
+              }
+              
+              set({ 
+                isCalling: false, 
+                currentCall: null,
+                callStartTime: null,
+                callDuration: 0,
+                callDurationInterval: null,
+                isCallAnswered: false,
+                connectionError: null
+              });
             });
-          });
+          };
+
+          // Start the initial listener setup
+          setupListener();
         } else {
           console.warn('No Call SID found. Full call details:', {
             customParameters: Array.from(call.customParameters?.entries() || []),

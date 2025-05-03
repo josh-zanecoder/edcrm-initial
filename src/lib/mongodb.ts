@@ -23,16 +23,7 @@ const client = new MongoClient(uri, options);
 
 const clientPromise = client.connect()
   .then((connectedClient) => {
-    
-
-    connectedClient.on('commandSucceeded', (event) => {
-      
-    });
-
-    connectedClient.on('commandFailed', (event) => {
-     
-    });
-
+    console.log('✅ MongoDB connected successfully');
     return connectedClient;
   })
   .catch((error) => {

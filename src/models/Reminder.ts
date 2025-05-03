@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { ReminderType, ReminderStatus } from '@/types/reminder';
+import mongoose from 'mongoose';
 
 const reminderSchema = new mongoose.Schema({
   prospectId: {
@@ -50,5 +51,9 @@ reminderSchema.pre('save', function (next) {
   this.updatedAt = new Date();
   next();
 });
+// Add indexes for common queries
+reminderSchema.index({ prospectId: 1 });
+reminderSchema.index({ dueDate: 1 });
+reminderSchema.index({ status: 1 });
 
 export default mongoose.models.Reminder || mongoose.model('Reminder', reminderSchema);

@@ -18,6 +18,9 @@ export function middleware(request: NextRequest) {
     '/api/twilio/recording-status',
     '/api/health',
     '/api/twilio/incoming-call-status',
+    '/api/twilio/transcribe',
+    '/api/tasks/create',
+
   ];
   if (publicPaths.includes(pathname)) {
     return NextResponse.next();
