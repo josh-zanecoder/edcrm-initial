@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     const userData = JSON.parse(userCookie);
 
-    const baseQuery = { 'assignedTo.id': userData.uid };
+    const baseQuery = { 'assignedTo._id': userData.id };
 
     const searchQuery = search
       ? {
@@ -52,12 +52,12 @@ export async function GET(request: NextRequest) {
       id: (prospect._id as mongoose.Types.ObjectId).toString(),
       _id: undefined,
       assignedTo: prospect.assignedTo || {
-        id: userData.uid,
+        _id: userData.id,
         email: userData.email,
         role: userData.role
       },
       addedBy: prospect.addedBy || {
-        id: userData.uid,
+        _id: userData.id,
         email: userData.email,
         role: userData.role
       }

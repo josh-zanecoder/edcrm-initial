@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import connectToMongoDB from '@/lib/mongoose';
 import Prospect from '@/models/Prospect';
 import { unformatPhoneNumber } from '@/utils/formatters';
+import { ObjectId } from 'mongodb';
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,6 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     const userInfo = {
+      _id: new ObjectId(userData.id),
       id: userData.uid,
       email: userData.email,
       role: userData.role
