@@ -19,6 +19,16 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 function formatDate(date: Date | string) {
   const dateObj = typeof date === "string" ? new Date(date) : date;
@@ -55,6 +65,8 @@ export default function ActivitiesPage({ params }: PageProps) {
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [deleteActivityId, setDeleteActivityId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchActivities = React.useCallback(async () => {
     try {
@@ -108,11 +120,19 @@ export default function ActivitiesPage({ params }: PageProps) {
     }
   };
 
-  const handleDeleteActivity = async (activityId: string) => {
+  const handleDeleteClick = (activityId: string) => {
+    setDeleteActivityId(activityId);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteActivityId) return;
+
+    setIsDeleting(true);
     const loadingToast = toast.loading("Deleting activity...");
+
     try {
       const response = await fetch(
-        `/api/prospects/${id}/activities/${activityId}`,
+        `/api/prospects/${id}/activities/${deleteActivityId}`,
         {
           method: "DELETE",
         }
@@ -124,7 +144,7 @@ export default function ActivitiesPage({ params }: PageProps) {
       }
 
       setActivities((prevActivities) =>
-        prevActivities.filter((activity) => activity._id !== activityId)
+        prevActivities.filter((activity) => activity._id !== deleteActivityId)
       );
       toast.success("Activity removed successfully", {
         id: loadingToast,
@@ -132,9 +152,15 @@ export default function ActivitiesPage({ params }: PageProps) {
     } catch (err) {
       console.error("Error deleting activity:", err);
       toast.error(
-        err instanceof Error ? err.message : "Failed to delete activity"
+        err instanceof Error ? err.message : "Failed to delete activity",
+        {
+          id: loadingToast,
+        }
       );
       fetchActivities();
+    } finally {
+      setIsDeleting(false);
+      setDeleteActivityId(null);
     }
   };
 
@@ -256,7 +282,7 @@ export default function ActivitiesPage({ params }: PageProps) {
             key={activity._id}
             className="overflow-hidden border-border/5 bg-card shadow-none"
           >
-            <CardHeader className="border-b border-border/5 bg-card p-4">
+            <CardHeader className="border-b border-border/5 bg-card p-3">
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-sm font-medium text-card-foreground">
@@ -273,15 +299,15 @@ export default function ActivitiesPage({ params }: PageProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => handleDeleteActivity(activity._id)}
+                    className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => handleDeleteClick(activity._id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
+                    className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary"
                     onClick={() => handleEditClick(activity)}
                   >
                     <Pencil className="h-4 w-4" />
@@ -289,7 +315,7 @@ export default function ActivitiesPage({ params }: PageProps) {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-2 bg-card p-4 pt-3">
+            <CardContent className="space-y-2 bg-card p-3 pt-2">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
                 <span>Due: {formatDate(activity.dueDate)}</span>
@@ -300,7 +326,7 @@ export default function ActivitiesPage({ params }: PageProps) {
                   <span>Completed: {formatDate(activity.completedAt)}</span>
                 </div>
               )}
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className="line-clamp-2 text-sm text-muted-foreground">
                 {activity.description}
               </p>
             </CardContent>
@@ -343,6 +369,38 @@ export default function ActivitiesPage({ params }: PageProps) {
         initialData={editingActivity || undefined}
         mode="edit"
       />
+
+      <AlertDialog
+        open={!!deleteActivityId}
+        onOpenChange={() => setDeleteActivityId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              activity.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

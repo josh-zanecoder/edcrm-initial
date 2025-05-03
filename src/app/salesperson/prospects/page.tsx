@@ -164,6 +164,18 @@ export default function ProspectsPage() {
     });
   };
 
+  const handleSendEmail = (prospect: Prospect) => {
+    const subject = `Regarding ${prospect.collegeName}`;
+    const body = `Hello,\n\nI hope this email finds you well. I wanted to reach out regarding ${prospect.collegeName}.\n\nBest regards,\n${prospect.assignedTo.email}`;
+
+    const mailtoLink = `mailto:${prospect.email}?subject=${encodeURIComponent(
+      subject
+    )}&body=${encodeURIComponent(body)}`;
+
+    // Open in a new tab to avoid navigation issues
+    window.open(mailtoLink, "_blank");
+  };
+
   // Render loading state
   if (isLoading) {
     return (
@@ -376,7 +388,12 @@ export default function ProspectsPage() {
                                 <Phone className="mr-2 h-4 w-4" />
                                 Call
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSendEmail(prospect);
+                                }}
+                              >
                                 <Mail className="mr-2 h-4 w-4" />
                                 Send Email
                               </DropdownMenuItem>
