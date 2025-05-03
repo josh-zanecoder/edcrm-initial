@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Reminder, ReminderType, ReminderStatus } from "@/types/reminder";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 import {
   Dialog,
@@ -20,6 +21,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 interface AddReminderModalProps {
   isOpen: boolean;
@@ -45,7 +53,7 @@ export default function AddReminderModal({
     description: "",
     type: ReminderType.EMAIL,
     status: ReminderStatus.PENDING,
-    dueDate: new Date().toISOString().split("T")[0],
+    dueDate: new Date(),
     isActive: true,
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -58,8 +66,8 @@ export default function AddReminderModal({
         type: initialData.type || ReminderType.EMAIL,
         status: initialData.status || ReminderStatus.PENDING,
         dueDate: initialData.dueDate
-          ? new Date(initialData.dueDate).toISOString().split("T")[0]
-          : new Date().toISOString().split("T")[0],
+          ? new Date(initialData.dueDate)
+          : new Date(),
         isActive: initialData.isActive ?? true,
       });
     } else {
@@ -68,7 +76,7 @@ export default function AddReminderModal({
         description: "",
         type: ReminderType.EMAIL,
         status: ReminderStatus.PENDING,
-        dueDate: new Date().toISOString().split("T")[0],
+        dueDate: new Date(),
         isActive: true,
       });
     }
@@ -83,7 +91,7 @@ export default function AddReminderModal({
     try {
       await onSave({
         ...formData,
-        dueDate: new Date(formData.dueDate),
+        dueDate: formData.dueDate,
         prospectId,
       });
       toast.success(
@@ -94,6 +102,7 @@ export default function AddReminderModal({
           id: loadingToast,
         }
       );
+      onClose();
     } catch (error) {
       toast.error(
         mode === "edit"
@@ -142,6 +151,7 @@ export default function AddReminderModal({
               id="title"
               value={formData.title}
               onChange={(e) => handleChange("title", e.target.value)}
+              placeholder="Enter reminder title"
               required
               disabled={isLoading}
             />
@@ -153,13 +163,14 @@ export default function AddReminderModal({
               id="description"
               value={formData.description}
               onChange={(e) => handleChange("description", e.target.value)}
+              placeholder="Enter reminder description"
               rows={4}
               required
               disabled={isLoading}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="type">Type</Label>
               <Select
@@ -199,18 +210,42 @@ export default function AddReminderModal({
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="dueDate">Due Date</Label>
-            <Input
-              type="date"
-              id="dueDate"
-              value={formData.dueDate}
-              onChange={(e) => handleChange("dueDate", e.target.value)}
-              required
-              disabled={isLoading}
-            />
+            <div className="space-y-2">
+              <Label>Due Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.dueDate && "text-muted-foreground"
+                    )}
+                    disabled={isLoading}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.dueDate ? (
+                      format(formData.dueDate, "PPP")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.dueDate}
+                    onSelect={(date: Date | undefined) => {
+                      if (date) {
+                        setFormData((prev) => ({ ...prev, dueDate: date }));
+                      }
+                    }}
+                    disabled={(date: Date) => date < new Date()}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
