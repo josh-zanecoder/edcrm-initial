@@ -1,11 +1,11 @@
 # Stage 1: Install dependencies
-FROM node:20-slim AS deps
+FROM node:20 AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
 # Stage 2: Build the app
-FROM node:20-slim AS builder
+FROM node:20 AS builder
 WORKDIR /app
 
 # Add build arguments
