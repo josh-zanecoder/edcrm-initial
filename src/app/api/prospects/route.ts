@@ -23,11 +23,7 @@ export async function GET(request: NextRequest) {
 
     const userData = JSON.parse(userCookie);
 
-<<<<<<< HEAD
-    const baseQuery = { 'assignedTo._id': userData.id };
-=======
-    const baseQuery = { "assignedTo.id": userData.uid };
->>>>>>> d7f06d2 ([FE] Mobile Responsive and Fix)
+    const baseQuery = { "assignedTo._id": userData.id };
 
     const searchQuery = search
       ? {
