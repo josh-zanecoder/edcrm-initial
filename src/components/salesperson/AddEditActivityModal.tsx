@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { Activity, ActivityType, ActivityStatus } from "@/types/activity";
 import { X, Loader2, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import React from "react";
 
 import {
   Dialog,
@@ -22,7 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
@@ -41,6 +42,11 @@ interface AddActivityModalProps {
   mode?: "add" | "edit";
 }
 
+const ReadOnlyInput = React.forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement>
+>((props, ref) => <input {...props} ref={ref} readOnly />);
+
 export default function AddActivityModal({
   isOpen,
   onClose,
@@ -49,7 +55,14 @@ export default function AddActivityModal({
   initialData,
   mode = "add",
 }: AddActivityModalProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    description: string;
+    type: ActivityType;
+    status: ActivityStatus;
+    dueDate: Date | null;
+    isActive: boolean;
+  }>({
     title: "",
     description: "",
     type: ActivityType.TASK,
@@ -90,7 +103,7 @@ export default function AddActivityModal({
     try {
       await onSave({
         ...formData,
-        dueDate: formData.dueDate,
+        dueDate: formData.dueDate ?? new Date(),
         prospectId,
       });
       toast.success(
@@ -225,38 +238,19 @@ export default function AddActivityModal({
 
             <div className="space-y-2">
               <Label className="text-sm sm:text-base">Due Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal text-sm sm:text-base",
-                      !formData.dueDate && "text-muted-foreground"
-                    )}
-                    disabled={isLoading}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.dueDate ? (
-                      format(formData.dueDate, "PPP")
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.dueDate}
-                    onSelect={(date: Date | undefined) => {
-                      if (date) {
-                        setFormData((prev) => ({ ...prev, dueDate: date }));
-                      }
-                    }}
-                    disabled={(date: Date) => date < new Date()}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <DatePicker
+                selected={formData.dueDate}
+                onChange={(date) =>
+                  setFormData((prev) => ({ ...prev, dueDate: date }))
+                }
+                minDate={new Date()}
+                placeholderText="Pick a date"
+                className="w-full text-sm sm:text-base rounded-md border border-input bg-transparent px-3 py-1 shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isLoading}
+                showPopperArrow={false}
+                popperPlacement="bottom-start"
+                customInput={<ReadOnlyInput />}
+              />
             </div>
           </div>
 

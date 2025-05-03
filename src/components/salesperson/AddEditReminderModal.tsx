@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { Reminder, ReminderType, ReminderStatus } from "@/types/reminder";
 import { X, Loader2, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import React from "react";
 
 import {
   Dialog,
@@ -21,12 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 interface AddReminderModalProps {
@@ -40,6 +36,11 @@ interface AddReminderModalProps {
   mode?: "add" | "edit";
 }
 
+const ReadOnlyInput = React.forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement>
+>((props, ref) => <input {...props} ref={ref} readOnly />);
+
 export default function AddReminderModal({
   isOpen,
   onClose,
@@ -48,7 +49,14 @@ export default function AddReminderModal({
   initialData,
   mode = "add",
 }: AddReminderModalProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    description: string;
+    type: ReminderType;
+    status: ReminderStatus;
+    dueDate: Date | null;
+    isActive: boolean;
+  }>({
     title: "",
     description: "",
     type: ReminderType.EMAIL,
@@ -65,9 +73,7 @@ export default function AddReminderModal({
         description: initialData.description || "",
         type: initialData.type || ReminderType.EMAIL,
         status: initialData.status || ReminderStatus.PENDING,
-        dueDate: initialData.dueDate
-          ? new Date(initialData.dueDate)
-          : new Date(),
+        dueDate: initialData.dueDate ? new Date(initialData.dueDate) : null,
         isActive: initialData.isActive ?? true,
       });
     } else {
@@ -76,7 +82,7 @@ export default function AddReminderModal({
         description: "",
         type: ReminderType.EMAIL,
         status: ReminderStatus.PENDING,
-        dueDate: new Date(),
+        dueDate: null,
         isActive: true,
       });
     }
@@ -91,7 +97,7 @@ export default function AddReminderModal({
     try {
       await onSave({
         ...formData,
-        dueDate: formData.dueDate,
+        dueDate: formData.dueDate ?? new Date(),
         prospectId,
       });
       toast.success(
@@ -223,38 +229,19 @@ export default function AddReminderModal({
 
             <div className="space-y-2">
               <Label className="text-sm sm:text-base">Due Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal text-sm sm:text-base",
-                      !formData.dueDate && "text-muted-foreground"
-                    )}
-                    disabled={isLoading}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.dueDate ? (
-                      format(formData.dueDate, "PPP")
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.dueDate}
-                    onSelect={(date: Date | undefined) => {
-                      if (date) {
-                        setFormData((prev) => ({ ...prev, dueDate: date }));
-                      }
-                    }}
-                    disabled={(date: Date) => date < new Date()}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <DatePicker
+                selected={formData.dueDate}
+                onChange={(date) =>
+                  setFormData((prev) => ({ ...prev, dueDate: date }))
+                }
+                minDate={new Date()}
+                placeholderText="Pick a date"
+                className="w-full text-sm sm:text-base rounded-md border border-input bg-transparent px-3 py-1 shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isLoading}
+                showPopperArrow={false}
+                popperPlacement="bottom-start"
+                customInput={<ReadOnlyInput />}
+              />
             </div>
           </div>
 
