@@ -32,4 +32,8 @@ export const useUserStore = create<UserStore>((set) => ({
       }
     }
   },
+  fetchColleges: async () => {
+    const res = await axios.get("/api/colleges");
+    set({ colleges: res.data.colleges });
+  },
 }));
