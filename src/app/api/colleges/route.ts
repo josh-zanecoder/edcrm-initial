@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const userData = JSON.parse(userCookie);
 
     // Find all prospects assigned to the salesperson and select only college-related fields
-    const colleges = await Prospect.find({ "assignedTo.id": userData.uid })
+    const colleges = await Prospect.find({ "assignedTo._id": userData.id })
       .select(
         "collegeName collegeTypes website address county bppeApproved email"
       )

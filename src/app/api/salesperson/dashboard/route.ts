@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
+import connectToMongoDB from '@/lib/mongoose';
+import Prospect from '@/models/Prospect';
+import Reminder from '@/models/Reminder';
+import Activity from '@/models/Activity';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
     const userCookie = request.cookies.get('user')?.value;
-   
+    
+    if (!userCookie) {
+      return NextResponse.json({ error: 'No user cookie found' }, { status: 401 });
+    }
 
     const userData = JSON.parse(userCookie || '');
 
@@ -15,59 +21,51 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
     }
 
-    const userId = new ObjectId(userData.id);
-    const client = await clientPromise;
-    const db = client.db();
-
-    const prospects = db.collection('prospects');
-    const reminders = db.collection('reminders');
-    const activities = db.collection('activities');
+    // Connect to MongoDB via Mongoose
+    await connectToMongoDB();
 
     // Get all prospect IDs assigned to this user
-    const assignedProspects = await prospects
-      .find({ 'assignedTo.id': userData.uid }, { projection: { _id: 1 } })
-      .toArray();
+    const assignedProspects = await Prospect.find(
+      { 'assignedTo._id': userData.id },
+      { _id: 1 }
+    ).lean();
+    
     const prospectIds = assignedProspects.map(p => p._id);
 
-    // Run all in parallel
+    // Run all queries in parallel
     const [
-      totalProspects,
       pendingReminders,
       upcomingReminders,
       recentActivities
     ] = await Promise.all([
-      Promise.resolve(assignedProspects.length),
-      reminders.countDocuments({
+      Reminder.countDocuments({
         prospectId: { $in: prospectIds },
         status: 'PENDING',
         isActive: true
       }),
-      reminders.find({
+      Reminder.find({
         prospectId: { $in: prospectIds },
         dueDate: { $gte: new Date() },
         status: 'PENDING',
         isActive: true
       })
+        .select('_id title dueDate type prospectId')
         .sort({ dueDate: 1 })
         .limit(5)
-        .project({ _id: 1, title: 1, dueDate: 1, type: 1, prospectId: 1 })
-        .toArray(),
-      activities.find({
+        .lean(),
+      Activity.find({
         prospectId: { $in: prospectIds },
         isActive: true
       })
+        .select('_id title createdAt type prospectId')
         .sort({ createdAt: -1 })
         .limit(5)
-        .project({ _id: 1, title: 1, createdAt: 1, type: 1, prospectId: 1 })
-        .toArray()
+        .lean()
     ]);
-    console.log('totalProspects', totalProspects);
-    console.log('pendingReminders', pendingReminders);
-    console.log('upcomingReminders', upcomingReminders);
-    console.log('recentActivities', recentActivities);
+
     return NextResponse.json({
       stats: {
-        totalProspects,
+        totalProspects: assignedProspects.length,
         pendingReminders,
         upcomingReminders,
         recentActivities,

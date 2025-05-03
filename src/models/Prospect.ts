@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { CollegeType } from '@/types/prospect';
 
 const userSchema = new mongoose.Schema({
+  _id: { type: mongoose.Schema.Types.ObjectId, required: true },
   id: { type: String, required: true },
   email: { type: String, required: true },
   role: { type: String, required: true }
