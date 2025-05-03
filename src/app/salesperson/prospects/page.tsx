@@ -15,6 +15,7 @@ import { useDebouncedCallback } from "use-debounce";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { Plus, Phone, Mail, MapPin, Globe, User, Search } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { Progress } from "@/components/ui/progress";
 
 import {
   Table,
@@ -63,6 +64,7 @@ export default function ProspectsPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [progress, setProgress] = useState(0);
 
   // Define callbacks using useCallback
   const handleRowClick = useCallback(
@@ -118,6 +120,21 @@ export default function ProspectsPage() {
       fetchProspects();
     }
   }, [user, currentPage, searchQuery]);
+
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 95) {
+            clearInterval(timer);
+            return 95;
+          }
+          return prev + 10;
+        });
+      }, 50);
+      return () => clearInterval(timer);
+    }
+  }, [isLoading]);
 
   const handleAddProspect = async (
     newProspect: Omit<
@@ -179,8 +196,11 @@ export default function ProspectsPage() {
   // Render loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3 w-[200px]">
+          <Progress value={progress} className="w-full" />
+          <p className="text-sm text-muted-foreground">Loading prospects...</p>
+        </div>
       </div>
     );
   }
