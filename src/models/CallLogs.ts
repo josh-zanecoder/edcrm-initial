@@ -9,6 +9,7 @@ export interface ICallLog extends Document {
   callSid: string;
   parentCallSid?: string;
   activityId: string;
+  transcription: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,7 +22,8 @@ const CallLogSchema: Schema = new Schema({
   callSid: { type: String, required: true, unique: true },
   memberId: { type: String, required: false},
   parentCallSid: { type: String },
-  activityId: { type: String, required: true }
+  activityId: { type: String, required: true },
+  transcription: { type: String, required: true}
 }, {
   timestamps: true
 });
@@ -29,7 +31,7 @@ const CallLogSchema: Schema = new Schema({
 // Create indexes for better query performance
 CallLogSchema.index({ userId: 1 });
 CallLogSchema.index({ prospectId: 1 });
-CallLogSchema.index({ callSid: 1 }, { unique: true });
 CallLogSchema.index({ memberId: 1 });
 
-export const CallLog = mongoose.model<ICallLog>('CallLog', CallLogSchema);
+// Use the existing model if it exists, otherwise create a new one
+export const CallLog = mongoose.models.CallLog || mongoose.model<ICallLog>('CallLog', CallLogSchema);

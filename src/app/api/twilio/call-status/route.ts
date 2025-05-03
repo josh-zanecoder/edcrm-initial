@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     
     // Extract call information from the callback
     const callSid = formData.get('CallSid') as string;
-    let callStatus = formData.get('CallStatus') as string;
+    const callStatus = formData.get('CallStatus') as string;
     const duration = formData.get('CallDuration') as string;
     const from = formData.get('From') as string;
     const to = formData.get('To') as string;
@@ -22,18 +22,12 @@ export async function POST(req: Request) {
     const activityId = formData.get('ActivityId') as string;
     const parentCallSid = formData.get('ParentCallSid') as string;
     
-    console.log(`Call ${callSid} status: ${callStatus}`);
+    console.log(`Callssssssssssss ${callSid} status: ${callStatus}`);
     
     // Check if this is an answer event
-    const isAnswerEvent = callStatus === 'answered' || callStatus === 'in-progress';
+    const isAnswerEvent = callStatus === 'answered';
     if (isAnswerEvent) {
       console.log(`🔔 CALL ANSWERED: Receiver at ${to} has answered the call from ${from}`);
-    }
-    
-    // Normalize 'in-progress' status to 'answered' for consistency
-    if (callStatus === 'in-progress') {
-      callStatus = 'answered';
-      console.log(`Normalized 'in-progress' status to 'answered' for call ${callSid}`);
     }
     
     // Store the call status in Firestore
@@ -96,7 +90,6 @@ export async function POST(req: Request) {
       };
       
       await mongoDb.collection('calllogs').insertOne(newCallLog);
-      console.log(`Created new call log for call ${callSid}`);
     } else {
       console.log(`Call log already exists for call ${callSid}`);
     }

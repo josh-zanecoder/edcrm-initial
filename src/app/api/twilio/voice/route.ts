@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     // if (/^\+?[1-9]\d{6,14}$/.test(to)) {
       // Dial a phone number
       dial.number({
-        statusCallbackEvent: ['ringing', 'answered', 'completed', 'initiated'],
+        statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
         // Note: 'in-progress' is a status that Twilio sends but not an event we can subscribe to
         statusCallback: '/api/twilio/call-status',
         statusCallbackMethod: 'POST'

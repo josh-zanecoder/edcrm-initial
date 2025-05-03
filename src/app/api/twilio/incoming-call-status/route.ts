@@ -96,7 +96,6 @@ export async function POST(request: Request) {
         };
         
         await mongoDb.collection('calllogs').insertOne(newCallLog);
-        console.log(`Created new call log for call ${callSid}`);
       } else {
         console.log(`Call log already exists for call ${callSid}`);
       }
