@@ -199,40 +199,40 @@ export default function RemindersPage({ params }: PageProps) {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-6 space-y-4 sm:space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Skeleton className="h-5 w-5" />
-            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-4 sm:h-5 w-4 sm:w-5" />
+            <Skeleton className="h-5 sm:h-6 w-28 sm:w-32" />
           </div>
-          <Skeleton className="h-9 w-24" />
+          <Skeleton className="h-8 sm:h-9 w-20 sm:w-24" />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <Card
               key={i}
               className="overflow-hidden border-border/5 bg-card shadow-none"
             >
-              <CardHeader className="border-b border-border/5 bg-card p-4">
+              <CardHeader className="border-b border-border/5 bg-card p-2.5 sm:p-4">
                 <div className="flex items-start justify-between">
-                  <div>
-                    <Skeleton className="h-5 w-32 mb-2" />
-                    <Skeleton className="h-5 w-20" />
+                  <div className="min-w-0 flex-1 pr-2">
+                    <Skeleton className="h-4 sm:h-5 w-28 sm:w-32 mb-1.5 sm:mb-2" />
+                    <Skeleton className="h-4 sm:h-5 w-16 sm:w-20" />
                   </div>
-                  <div className="flex gap-2">
-                    <Skeleton className="h-8 w-8" />
-                    <Skeleton className="h-8 w-8" />
+                  <div className="flex gap-1 sm:gap-2 flex-shrink-0">
+                    <Skeleton className="h-7 w-7 sm:h-8 sm:w-8" />
+                    <Skeleton className="h-7 w-7 sm:h-8 sm:w-8" />
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-2 bg-card p-4 pt-3">
+              <CardContent className="space-y-2 bg-card p-2.5 sm:p-4 pt-2 sm:pt-3">
                 <div className="flex items-center gap-2">
-                  <Skeleton className="h-4 w-4" />
-                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <Skeleton className="h-3.5 w-20 sm:h-4 sm:w-24" />
                 </div>
-                <Skeleton className="h-4 w-full mt-2" />
-                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3.5 sm:h-4 w-full mt-1.5 sm:mt-2" />
+                <Skeleton className="h-3.5 sm:h-4 w-3/4" />
               </CardContent>
             </Card>
           ))}
@@ -243,7 +243,7 @@ export default function RemindersPage({ params }: PageProps) {
 
   if (error) {
     return (
-      <Alert variant="destructive" className="mx-auto max-w-2xl">
+      <Alert variant="destructive" className="mx-auto max-w-2xl m-3 sm:m-6">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Error Loading Reminders</AlertTitle>
         <AlertDescription>{error}</AlertDescription>
@@ -260,68 +260,76 @@ export default function RemindersPage({ params }: PageProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Bell className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-medium">Reminders</h1>
+          <Bell className="h-4 sm:h-5 w-4 sm:w-5 text-primary" />
+          <h1 className="text-base sm:text-lg font-medium">Reminders</h1>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} size="sm">
+        <Button
+          onClick={() => setIsModalOpen(true)}
+          size="sm"
+          className="h-8 sm:h-9"
+        >
           Add Reminder
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
         {reminders.map((reminder) => (
           <Card
             key={reminder._id}
             className="overflow-hidden border-border/5 bg-card shadow-none"
           >
             <CardHeader className="border-b border-border/5 bg-card p-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-card-foreground">
+              <div className="relative flex flex-col w-full">
+                <div className="flex items-start justify-between w-full">
+                  <h3 className="text-sm font-medium text-card-foreground break-all pr-16">
                     {reminder.title}
                   </h3>
-                  <Badge
-                    variant={getStatusVariant(reminder.status)}
-                    className="mt-1 text-xs font-normal"
-                  >
-                    {reminder.status}
-                  </Badge>
+                  <div className="flex items-start gap-1 absolute right-0 top-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => handleDeleteClick(reminder._id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary"
+                      onClick={() => handleEditClick(reminder)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => handleDeleteClick(reminder._id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary"
-                    onClick={() => handleEditClick(reminder)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Badge
+                  variant={getStatusVariant(reminder.status)}
+                  className="mt-1.5 w-fit text-[10px] font-normal"
+                >
+                  {reminder.status}
+                </Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-2 bg-card p-3 pt-2">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Clock className="h-3.5 w-3.5" />
-                <span>Due: {formatDate(reminder.dueDate)}</span>
+            <CardContent className="space-y-2 bg-card p-3">
+              <div className="flex items-center gap-2">
+                <Clock className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground truncate">
+                  Due: {formatDate(reminder.dueDate)}
+                </span>
               </div>
               {reminder.completedAt && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                  <span>Completed: {formatDate(reminder.completedAt)}</span>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0 text-green-500" />
+                  <span className="text-xs text-muted-foreground truncate">
+                    Completed: {formatDate(reminder.completedAt)}
+                  </span>
                 </div>
               )}
-              <p className="line-clamp-2 text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground break-words leading-relaxed">
                 {reminder.description}
               </p>
             </CardContent>
@@ -330,15 +338,19 @@ export default function RemindersPage({ params }: PageProps) {
 
         {reminders.length === 0 && (
           <Card className="col-span-full border-border/5 bg-card">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Bell className="h-12 w-12 text-primary/20" />
-              <h3 className="mt-4 text-base font-medium text-card-foreground">
+            <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12">
+              <Bell className="h-10 w-10 sm:h-12 sm:w-12 text-primary/20" />
+              <h3 className="mt-3 sm:mt-4 text-sm sm:text-base font-medium text-card-foreground">
                 No reminders yet
               </h3>
-              <p className="mb-4 text-sm text-muted-foreground">
+              <p className="mb-3 sm:mb-4 text-xs sm:text-sm text-center text-muted-foreground max-w-[240px]">
                 Get started by adding a new reminder.
               </p>
-              <Button onClick={() => setIsModalOpen(true)} size="sm">
+              <Button
+                onClick={() => setIsModalOpen(true)}
+                size="sm"
+                className="h-8 sm:h-9"
+              >
                 Add First Reminder
               </Button>
             </CardContent>
@@ -369,7 +381,7 @@ export default function RemindersPage({ params }: PageProps) {
         open={!!deleteReminderId}
         onOpenChange={() => setDeleteReminderId(null)}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="sm:max-w-[425px]">
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>

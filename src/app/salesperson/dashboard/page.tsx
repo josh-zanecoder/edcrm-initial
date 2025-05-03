@@ -105,43 +105,43 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
       {isLoading ? (
         // Skeleton loader
         <>
           {/* Stats Grid Skeleton */}
-          <div className="grid auto-cols-fr grid-flow-col gap-6 overflow-x-auto pb-4">
-            <Card className="min-w-[280px]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
+            <Card className="w-full">
               <CardHeader className="relative">
-                <div className="flex items-center gap-4">
-                  <Skeleton className="h-12 w-12 rounded-lg" />
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <Skeleton className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg" />
                   <div className="flex-1">
-                    <Skeleton className="h-4 w-24 mb-2" />
-                    <Skeleton className="h-8 w-16" />
+                    <Skeleton className="h-3 sm:h-4 w-20 sm:w-24 mb-2" />
+                    <Skeleton className="h-6 sm:h-8 w-14 sm:w-16" />
                   </div>
-                  <Skeleton className="h-6 w-16" />
+                  <Skeleton className="h-5 sm:h-6 w-14 sm:w-16" />
                 </div>
               </CardHeader>
               <CardFooter className="flex-col items-start gap-1 text-sm">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 sm:h-4 w-28 sm:w-32" />
+                <Skeleton className="h-2.5 sm:h-3 w-20 sm:w-24" />
               </CardFooter>
             </Card>
 
-            <Card className="min-w-[280px]">
+            <Card className="w-full">
               <CardHeader className="relative">
-                <div className="flex items-center gap-4">
-                  <Skeleton className="h-12 w-12 rounded-lg" />
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <Skeleton className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg" />
                   <div className="flex-1">
-                    <Skeleton className="h-4 w-24 mb-2" />
-                    <Skeleton className="h-8 w-16" />
+                    <Skeleton className="h-3 sm:h-4 w-20 sm:w-24 mb-2" />
+                    <Skeleton className="h-6 sm:h-8 w-14 sm:w-16" />
                   </div>
-                  <Skeleton className="h-6 w-16" />
+                  <Skeleton className="h-5 sm:h-6 w-14 sm:w-16" />
                 </div>
               </CardHeader>
               <CardFooter className="flex-col items-start gap-1 text-sm">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 sm:h-4 w-28 sm:w-32" />
+                <Skeleton className="h-2.5 sm:h-3 w-20 sm:w-24" />
               </CardFooter>
             </Card>
           </div>
@@ -149,36 +149,36 @@ export default function DashboardPage() {
           {/* Quick Actions Skeleton */}
           <Card>
             <CardHeader>
-              <Skeleton className="h-6 w-32 mb-2" />
-              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-5 sm:h-6 w-28 sm:w-32 mb-2" />
+              <Skeleton className="h-3 sm:h-4 w-40 sm:w-48" />
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <Skeleton className="h-9 sm:h-10 w-full" />
+                <Skeleton className="h-9 sm:h-10 w-full" />
               </div>
             </CardContent>
           </Card>
 
           {/* Reminders & Activities Skeleton */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <Skeleton className="h-6 w-40" />
-                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-5 sm:h-6 w-32 sm:w-40" />
+                <Skeleton className="h-7 sm:h-8 w-14 sm:w-16" />
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 {[1, 2, 3].map((i) => (
                   <div
                     key={i}
-                    className="flex items-start justify-between p-4 rounded-lg border"
+                    className="flex items-start justify-between p-3 sm:p-4 rounded-lg border"
                   >
                     <div className="space-y-2">
-                      <Skeleton className="h-4 w-32" />
-                      <Skeleton className="h-3 w-24" />
-                      <Skeleton className="h-3 w-40" />
+                      <Skeleton className="h-3 sm:h-4 w-28 sm:w-32" />
+                      <Skeleton className="h-2.5 sm:h-3 w-20 sm:w-24" />
+                      <Skeleton className="h-2.5 sm:h-3 w-36 sm:w-40" />
                     </div>
-                    <Skeleton className="h-6 w-16" />
+                    <Skeleton className="h-5 sm:h-6 w-14 sm:w-16" />
                   </div>
                 ))}
               </CardContent>
@@ -186,19 +186,19 @@ export default function DashboardPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <Skeleton className="h-6 w-40" />
-                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-5 sm:h-6 w-32 sm:w-40" />
+                <Skeleton className="h-7 sm:h-8 w-14 sm:w-16" />
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 {[1, 2, 3].map((i) => (
                   <div
                     key={i}
-                    className="flex items-start justify-between p-4 rounded-lg border"
+                    className="flex items-start justify-between p-3 sm:p-4 rounded-lg border"
                   >
                     <div className="space-y-2">
-                      <Skeleton className="h-4 w-32" />
-                      <Skeleton className="h-3 w-24" />
-                      <Skeleton className="h-3 w-40" />
+                      <Skeleton className="h-3 sm:h-4 w-28 sm:w-32" />
+                      <Skeleton className="h-2.5 sm:h-3 w-20 sm:w-24" />
+                      <Skeleton className="h-2.5 sm:h-3 w-36 sm:w-40" />
                     </div>
                   </div>
                 ))}
@@ -210,22 +210,24 @@ export default function DashboardPage() {
         // Actual dashboard content
         <>
           {/* Stats Grid */}
-          <div className="grid auto-cols-fr grid-flow-col gap-6 overflow-x-auto pb-4">
-            <Card className="min-w-[280px]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
+            <Card className="w-full">
               <CardHeader className="relative">
-                <div className="flex items-center gap-4">
-                  <div className="rounded-lg bg-primary/10 p-3">
-                    <Users className="h-6 w-6 text-primary" />
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="rounded-lg bg-primary/10 p-2 sm:p-3">
+                    <Users className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                   </div>
-                  <div className="flex-1">
-                    <CardDescription>Total Prospects</CardDescription>
-                    <CardTitle className="text-2xl font-semibold tabular-nums">
+                  <div className="flex-1 min-w-0">
+                    <CardDescription className="text-sm">
+                      Total Prospects
+                    </CardDescription>
+                    <CardTitle className="text-xl sm:text-2xl font-semibold tabular-nums">
                       {stats.totalProspects}
                     </CardTitle>
                   </div>
                   <Badge
                     variant="outline"
-                    className="flex gap-1 rounded-lg text-xs"
+                    className="flex gap-1 rounded-lg text-xs whitespace-nowrap"
                   >
                     <ArrowUpRight className="size-3" />
                     +12.5%
@@ -234,29 +236,31 @@ export default function DashboardPage() {
               </CardHeader>
               <CardFooter className="flex-col items-start gap-1 text-sm">
                 <div className="line-clamp-1 flex gap-2 font-medium">
-                  Growing steadily <ArrowUpRight className="size-4" />
+                  Growing steadily <ArrowUpRight className="size-3 sm:size-4" />
                 </div>
-                <div className="text-muted-foreground">
+                <div className="text-xs sm:text-sm text-muted-foreground">
                   Compared to last month
                 </div>
               </CardFooter>
             </Card>
 
-            <Card className="min-w-[280px]">
+            <Card className="w-full">
               <CardHeader className="relative">
-                <div className="flex items-center gap-4">
-                  <div className="rounded-lg bg-yellow-500/10 p-3">
-                    <Clock className="h-6 w-6 text-yellow-500" />
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="rounded-lg bg-yellow-500/10 p-2 sm:p-3">
+                    <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500" />
                   </div>
-                  <div className="flex-1">
-                    <CardDescription>Pending Tasks</CardDescription>
-                    <CardTitle className="text-2xl font-semibold tabular-nums">
+                  <div className="flex-1 min-w-0">
+                    <CardDescription className="text-sm">
+                      Pending Tasks
+                    </CardDescription>
+                    <CardTitle className="text-xl sm:text-2xl font-semibold tabular-nums">
                       {stats.pendingReminders}
                     </CardTitle>
                   </div>
                   <Badge
                     variant="outline"
-                    className="flex gap-1 rounded-lg text-xs"
+                    className="flex gap-1 rounded-lg text-xs whitespace-nowrap"
                   >
                     <ArrowDownRight className="size-3" />
                     -20%
@@ -265,9 +269,10 @@ export default function DashboardPage() {
               </CardHeader>
               <CardFooter className="flex-col items-start gap-1 text-sm">
                 <div className="line-clamp-1 flex gap-2 font-medium">
-                  Decreased this week <ArrowDownRight className="size-4" />
+                  Decreased this week{" "}
+                  <ArrowDownRight className="size-3 sm:size-4" />
                 </div>
-                <div className="text-muted-foreground">
+                <div className="text-xs sm:text-sm text-muted-foreground">
                   Good task completion rate
                 </div>
               </CardFooter>
@@ -277,14 +282,18 @@ export default function DashboardPage() {
           {/* Quick Actions */}
           <Card>
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Common tasks and operations</CardDescription>
+              <CardTitle className="text-lg sm:text-xl">
+                Quick Actions
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Common tasks and operations
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 <Button
                   onClick={() => router.push("/salesperson/prospects")}
-                  className="w-full"
+                  className="w-full text-sm"
                   variant="default"
                 >
                   <EyeIcon className="mr-2 h-4 w-4" />
@@ -292,7 +301,7 @@ export default function DashboardPage() {
                 </Button>
                 <Button
                   onClick={() => router.push("/salesperson/prospects")}
-                  className="w-full"
+                  className="w-full text-sm"
                   variant="secondary"
                 >
                   <PlusIcon className="mr-2 h-4 w-4" />
@@ -303,12 +312,17 @@ export default function DashboardPage() {
           </Card>
 
           {/* Reminders & Activities Side-by-Side */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6">
             {/* Upcoming Reminders */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle>Upcoming Reminders</CardTitle>
-                <Button variant="ghost" className="text-sm">
+                <CardTitle className="text-lg sm:text-xl">
+                  Upcoming Reminders
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  className="text-xs sm:text-sm h-8 sm:h-9"
+                >
                   View all
                 </Button>
               </CardHeader>
@@ -318,19 +332,21 @@ export default function DashboardPage() {
                     No upcoming reminders.
                   </p>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {stats.upcomingReminders.map((reminder) => (
                       <div
                         key={reminder._id}
-                        className="flex items-start justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                        className="flex items-start justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
                       >
-                        <div>
-                          <p className="font-medium">{reminder.title}</p>
-                          <p className="text-sm text-muted-foreground">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm sm:text-base truncate">
+                            {reminder.title}
+                          </p>
+                          <p className="text-xs sm:text-sm text-muted-foreground">
                             {reminder.type}
                           </p>
                           <time
-                            className="text-sm text-muted-foreground"
+                            className="text-xs sm:text-sm text-muted-foreground"
                             dateTime={reminder.dueDate}
                           >
                             {new Date(reminder.dueDate).toLocaleString()}
@@ -339,7 +355,7 @@ export default function DashboardPage() {
                         {isDueSoon(reminder.dueDate) && (
                           <Badge
                             variant="destructive"
-                            className="flex items-center gap-1"
+                            className="flex items-center gap-1 ml-2 whitespace-nowrap text-[10px] sm:text-xs"
                           >
                             <ExclamationTriangleIcon className="h-3 w-3" />
                             Due Soon
@@ -355,8 +371,13 @@ export default function DashboardPage() {
             {/* Recent Activities */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle>Recent Activities</CardTitle>
-                <Button variant="ghost" className="text-sm">
+                <CardTitle className="text-lg sm:text-xl">
+                  Recent Activities
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  className="text-xs sm:text-sm h-8 sm:h-9"
+                >
                   View all
                 </Button>
               </CardHeader>
@@ -366,19 +387,21 @@ export default function DashboardPage() {
                     No recent activities.
                   </p>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {stats.recentActivities.map((activity) => (
                       <div
                         key={activity._id}
-                        className="flex items-start justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                        className="flex items-start justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
                       >
-                        <div>
-                          <p className="font-medium">{activity.title}</p>
-                          <p className="text-sm text-muted-foreground">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm sm:text-base truncate">
+                            {activity.title}
+                          </p>
+                          <p className="text-xs sm:text-sm text-muted-foreground">
                             {activity.type}
                           </p>
                           <time
-                            className="text-sm text-muted-foreground"
+                            className="text-xs sm:text-sm text-muted-foreground"
                             dateTime={activity.createdAt}
                           >
                             {new Date(activity.createdAt).toLocaleString()}

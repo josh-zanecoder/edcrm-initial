@@ -178,41 +178,41 @@ export default function MembersPage({ params }: PageProps) {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Skeleton className="h-5 w-5" />
-            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 sm:h-5 w-4 sm:w-5" />
+            <Skeleton className="h-5 sm:h-6 w-32 sm:w-40" />
           </div>
-          <Skeleton className="h-9 w-24" />
+          <Skeleton className="h-8 sm:h-9 w-20 sm:w-24" />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <Card
               key={i}
               className="overflow-hidden border-border/5 bg-card shadow-none"
             >
-              <CardHeader className="border-b border-border/5 bg-card p-4">
+              <CardHeader className="border-b border-border/5 bg-card p-3 sm:p-4">
                 <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-8 w-8 rounded-full" />
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Skeleton className="h-7 w-7 sm:h-8 sm:w-8 rounded-full" />
                     <div>
-                      <Skeleton className="h-5 w-32 mb-2" />
-                      <Skeleton className="h-5 w-20" />
+                      <Skeleton className="h-4 sm:h-5 w-28 sm:w-32 mb-1.5 sm:mb-2" />
+                      <Skeleton className="h-4 sm:h-5 w-16 sm:w-20" />
                     </div>
                   </div>
-                  <Skeleton className="h-8 w-8" />
+                  <Skeleton className="h-7 w-7 sm:h-8 sm:w-8" />
                 </div>
               </CardHeader>
-              <CardContent className="space-y-2 bg-card p-4 pt-3">
+              <CardContent className="space-y-2 bg-card p-3 sm:p-4 pt-2 sm:pt-3">
                 <div className="flex items-center gap-2">
-                  <Skeleton className="h-4 w-4" />
-                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+                  <Skeleton className="h-3.5 sm:h-4 w-40 sm:w-48" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <Skeleton className="h-4 w-4" />
-                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+                  <Skeleton className="h-3.5 sm:h-4 w-28 sm:w-32" />
                 </div>
               </CardContent>
             </Card>
@@ -224,7 +224,7 @@ export default function MembersPage({ params }: PageProps) {
 
   if (error) {
     return (
-      <Alert variant="destructive" className="mx-auto max-w-2xl">
+      <Alert variant="destructive" className="mx-auto max-w-2xl m-3 sm:m-6">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Error Loading Members</AlertTitle>
         <AlertDescription>{error}</AlertDescription>
@@ -241,38 +241,44 @@ export default function MembersPage({ params }: PageProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Users2 className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-medium">College Staff Members</h1>
+          <Users2 className="h-4 sm:h-5 w-4 sm:w-5 text-primary" />
+          <h1 className="text-base sm:text-lg font-medium">
+            College Staff Members
+          </h1>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} size="sm">
+        <Button
+          onClick={() => setIsModalOpen(true)}
+          size="sm"
+          className="h-8 sm:h-9"
+        >
           Add Member
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
         {members.map((member) => (
           <Card
             key={member._id}
             className="overflow-hidden border-border/5 bg-card shadow-none"
           >
-            <CardHeader className="border-b border-border/5 bg-card p-4">
+            <CardHeader className="border-b border-border/5 bg-card p-2.5 sm:p-4">
               <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="border border-border/5 bg-primary/10 text-sm text-primary">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <Avatar className="h-8 w-8 flex-shrink-0">
+                    <AvatarFallback className="border border-border/5 bg-primary/10 text-[11px] sm:text-sm text-primary">
                       {getInitials(member.firstName, member.lastName)}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <h3 className="text-sm font-medium text-card-foreground">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-medium text-card-foreground truncate pr-2">
                       {member.firstName} {member.lastName}
                     </h3>
                     <Badge
                       variant="secondary"
-                      className="mt-1 text-xs font-normal"
+                      className="mt-0.5 text-[10px] sm:text-xs font-normal max-w-full truncate"
                     >
                       {member.role}
                     </Badge>
@@ -283,44 +289,44 @@ export default function MembersPage({ params }: PageProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
+                      className="h-8 w-8 flex-shrink-0 p-0 hover:bg-primary/10 hover:text-primary ml-2"
                     >
                       <span className="sr-only">Open menu</span>
-                      <Pencil className="h-4 w-4" />
+                      <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="w-[160px]">
                     <DropdownMenuItem
                       onClick={() => handleEditClick(member)}
                       className="gap-2"
                     >
-                      <Pencil className="h-4 w-4" />
-                      Edit Member
+                      <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span className="text-xs sm:text-sm">Edit Member</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => handleDeleteMember(member._id)}
                       className="gap-2 text-destructive"
                     >
-                      <Trash2 className="h-4 w-4" />
-                      Delete Member
+                      <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span className="text-xs sm:text-sm">Delete Member</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </CardHeader>
-            <CardContent className="space-y-2 bg-card p-4 pt-3">
+            <CardContent className="space-y-1.5 sm:space-y-2 bg-card p-2.5 sm:p-4">
               <a
                 href={`mailto:${member.email}`}
-                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary"
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary truncate"
               >
-                <Mail className="h-3.5 w-3.5" />
-                {member.email}
+                <Mail className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="truncate">{member.email}</span>
               </a>
               <a
                 href={`tel:${member.phone}`}
                 className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary"
               >
-                <Phone className="h-3.5 w-3.5" />
+                <Phone className="h-3.5 w-3.5 flex-shrink-0" />
                 {displayPhone(member.phone)}
               </a>
             </CardContent>
@@ -329,15 +335,19 @@ export default function MembersPage({ params }: PageProps) {
 
         {members.length === 0 && (
           <Card className="col-span-full border-border/5 bg-card">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Users2 className="h-12 w-12 text-primary/20" />
-              <h3 className="mt-4 text-base font-medium text-card-foreground">
+            <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12">
+              <Users2 className="h-10 w-10 sm:h-12 sm:w-12 text-primary/20" />
+              <h3 className="mt-3 sm:mt-4 text-sm sm:text-base font-medium text-card-foreground">
                 No members yet
               </h3>
-              <p className="mb-4 text-sm text-muted-foreground">
+              <p className="mb-3 sm:mb-4 text-xs sm:text-sm text-center text-muted-foreground max-w-[240px]">
                 Get started by adding college staff members.
               </p>
-              <Button onClick={() => setIsModalOpen(true)} size="sm">
+              <Button
+                onClick={() => setIsModalOpen(true)}
+                size="sm"
+                className="h-9"
+              >
                 Add First Member
               </Button>
             </CardContent>

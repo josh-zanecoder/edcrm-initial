@@ -268,20 +268,32 @@ export default function ProspectDetailsPage({ params }: PageProps) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <Card className="mb-6">
-        <CardHeader className="flex flex-row items-center justify-between">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <Card className="mb-4 sm:mb-6">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
           <div className="flex items-center gap-3">
-            <Building2 className="h-7 w-7 text-primary" />
-            <CardTitle>Prospect Details</CardTitle>
+            <Building2 className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
+            <CardTitle className="text-lg sm:text-xl">
+              Prospect Details
+            </CardTitle>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2 sm:gap-3">
             {isEditing ? (
               <>
-                <Button variant="outline" onClick={handleCancel}>
+                <Button
+                  variant="outline"
+                  onClick={handleCancel}
+                  size="sm"
+                  className="w-full sm:w-auto"
+                >
                   Cancel
                 </Button>
-                <Button onClick={handleSave} disabled={isSaving}>
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  size="sm"
+                  className="w-full sm:w-auto"
+                >
                   {isSaving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -293,62 +305,71 @@ export default function ProspectDetailsPage({ params }: PageProps) {
                 </Button>
               </>
             ) : (
-              <Button onClick={handleEdit}>Edit Details</Button>
+              <Button
+                onClick={handleEdit}
+                size="sm"
+                className="w-full sm:w-auto"
+              >
+                Edit Details
+              </Button>
             )}
           </div>
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Left Column */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+        {/* College Details Card */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
-              <Building2 className="h-6 w-6 text-primary" />
-              <CardTitle>College Details</CardTitle>
+              <Building2 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              <CardTitle className="text-base sm:text-lg">
+                College Details
+              </CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="space-y-5">
+          <CardContent className="space-y-4 sm:space-y-5">
             <div className="space-y-2">
-              <Label>College Name</Label>
+              <Label className="text-sm sm:text-base">College Name</Label>
               {isEditing ? (
                 <Input
                   value={editedProspect.collegeName}
                   onChange={(e) => handleChange("collegeName", e.target.value)}
                   placeholder="Enter college name"
+                  className="text-sm sm:text-base"
                 />
               ) : (
-                <p className="text-base text-foreground">
+                <p className="text-sm sm:text-base text-foreground">
                   {prospect.collegeName}
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label>Phone</Label>
+              <Label className="text-sm sm:text-base">Phone</Label>
               {isEditing ? (
                 <div className="space-y-2">
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Phone className="h-5 w-5 text-muted-foreground" />
+                      <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
                     </div>
                     <Input
                       type="tel"
                       value={formatPhoneNumber(editedProspect.phone)}
                       onChange={(e) => handleChange("phone", e.target.value)}
-                      className="pl-10"
+                      className="pl-9 sm:pl-10 text-sm sm:text-base"
                       placeholder="(XXX) XXX-XXXX"
                       maxLength={14}
                     />
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Please enter phone number in format: (XXX) XXX-XXXX
                   </p>
                 </div>
               ) : (
                 <div className="flex items-center">
-                  <Phone className="h-5 w-5 text-muted-foreground mr-2" />
-                  <span className="text-base text-foreground">
+                  <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground mr-2" />
+                  <span className="text-sm sm:text-base text-foreground">
                     {formatPhoneNumber(prospect.phone)}
                   </span>
                 </div>
@@ -356,24 +377,24 @@ export default function ProspectDetailsPage({ params }: PageProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Email</Label>
+              <Label className="text-sm sm:text-base">Email</Label>
               {isEditing ? (
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-muted-foreground" />
+                    <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
                   </div>
                   <Input
                     type="email"
                     value={editedProspect.email}
                     onChange={(e) => handleChange("email", e.target.value)}
-                    className="pl-10"
+                    className="pl-9 sm:pl-10 text-sm sm:text-base"
                     placeholder="email@example.com"
                   />
                 </div>
               ) : (
                 <div className="flex items-center">
-                  <Mail className="h-5 w-5 text-muted-foreground mr-2" />
-                  <span className="text-base text-foreground">
+                  <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground mr-2" />
+                  <span className="text-sm sm:text-base text-foreground">
                     {prospect.email}
                   </span>
                 </div>
@@ -381,28 +402,28 @@ export default function ProspectDetailsPage({ params }: PageProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Website</Label>
+              <Label className="text-sm sm:text-base">Website</Label>
               {isEditing ? (
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Globe className="h-5 w-5 text-muted-foreground" />
+                    <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
                   </div>
                   <Input
                     type="url"
                     value={editedProspect.website}
                     onChange={(e) => handleChange("website", e.target.value)}
-                    className="pl-10"
+                    className="pl-9 sm:pl-10 text-sm sm:text-base"
                     placeholder="https://example.com"
                   />
                 </div>
               ) : (
                 <div className="flex items-center">
-                  <Globe className="h-5 w-5 text-muted-foreground mr-2" />
+                  <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground mr-2" />
                   <a
                     href={prospect.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-base text-primary hover:underline"
+                    className="text-sm sm:text-base text-primary hover:underline break-all"
                   >
                     {prospect.website}
                   </a>
@@ -412,26 +433,29 @@ export default function ProspectDetailsPage({ params }: PageProps) {
           </CardContent>
         </Card>
 
-        {/* Right Column */}
+        {/* Location & Status Card */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
-              <MapPin className="h-6 w-6 text-primary" />
-              <CardTitle>Location & Status</CardTitle>
+              <MapPin className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              <CardTitle className="text-base sm:text-lg">
+                Location & Status
+              </CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="space-y-5">
+          <CardContent className="space-y-4 sm:space-y-5">
             <div className="space-y-2">
-              <Label>Address</Label>
+              <Label className="text-sm sm:text-base">Address</Label>
               {isEditing ? (
                 <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Input
                       placeholder="City"
                       value={editedProspect.address.city}
                       onChange={(e) =>
                         handleChange("address.city", e.target.value)
                       }
+                      className="text-sm sm:text-base"
                     />
                     <Input
                       placeholder="State"
@@ -439,6 +463,7 @@ export default function ProspectDetailsPage({ params }: PageProps) {
                       onChange={(e) =>
                         handleChange("address.state", e.target.value)
                       }
+                      className="text-sm sm:text-base"
                     />
                   </div>
                   <Input
@@ -447,16 +472,17 @@ export default function ProspectDetailsPage({ params }: PageProps) {
                     onChange={(e) =>
                       handleChange("address.zip", e.target.value)
                     }
+                    className="text-sm sm:text-base"
                   />
                 </div>
               ) : (
                 <div className="flex items-start">
-                  <MapPin className="h-5 w-5 text-muted-foreground mr-2 mt-0.5" />
+                  <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground mr-2 mt-0.5" />
                   <div>
-                    <p className="text-base text-foreground">
+                    <p className="text-sm sm:text-base text-foreground">
                       {formatAddress(prospect.address)}
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                       {prospect.county} County
                     </p>
                   </div>
@@ -465,26 +491,29 @@ export default function ProspectDetailsPage({ params }: PageProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>County</Label>
+              <Label className="text-sm sm:text-base">County</Label>
               {isEditing ? (
                 <Input
                   value={editedProspect.county}
                   onChange={(e) => handleChange("county", e.target.value)}
                   placeholder="Enter county"
+                  className="text-sm sm:text-base"
                 />
               ) : (
-                <p className="text-base text-foreground">{prospect.county}</p>
+                <p className="text-sm sm:text-base text-foreground">
+                  {prospect.county}
+                </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label>Status</Label>
+              <Label className="text-sm sm:text-base">Status</Label>
               {isEditing ? (
                 <Select
                   value={editedProspect.status}
                   onValueChange={(value) => handleChange("status", value)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="text-sm sm:text-base">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -497,14 +526,16 @@ export default function ProspectDetailsPage({ params }: PageProps) {
                 </Select>
               ) : (
                 <div className="flex items-center">
-                  <Clock className="h-5 w-5 text-muted-foreground mr-2" />
-                  <Badge variant="secondary">{prospect.status}</Badge>
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground mr-2" />
+                  <Badge variant="secondary" className="text-xs sm:text-sm">
+                    {prospect.status}
+                  </Badge>
                 </div>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label>College Types</Label>
+              <Label className="text-sm sm:text-base">College Types</Label>
               {isEditing ? (
                 <div className="flex flex-wrap gap-2">
                   {COLLEGE_TYPES.map((type) => (
@@ -521,6 +552,7 @@ export default function ProspectDetailsPage({ params }: PageProps) {
                       onClick={() =>
                         handleCollegeTypeToggle(type as CollegeType)
                       }
+                      className="text-xs sm:text-sm"
                     >
                       {type}
                     </Button>
@@ -529,7 +561,11 @@ export default function ProspectDetailsPage({ params }: PageProps) {
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {prospect.collegeTypes?.map((type) => (
-                    <Badge key={type} variant="secondary">
+                    <Badge
+                      key={type}
+                      variant="secondary"
+                      className="text-xs sm:text-sm"
+                    >
                       {type}
                     </Badge>
                   ))}
@@ -538,7 +574,7 @@ export default function ProspectDetailsPage({ params }: PageProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>BPPE Approval</Label>
+              <Label className="text-sm sm:text-base">BPPE Approval</Label>
               {isEditing ? (
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -550,7 +586,7 @@ export default function ProspectDetailsPage({ params }: PageProps) {
                   />
                   <Label
                     htmlFor="bppeApproved"
-                    className="text-muted-foreground"
+                    className="text-sm sm:text-base text-muted-foreground"
                   >
                     BPPE Approved
                   </Label>
@@ -559,20 +595,20 @@ export default function ProspectDetailsPage({ params }: PageProps) {
                 <div className="flex items-center">
                   {prospect.bppeApproved ? (
                     <>
-                      <CheckCircle2 className="h-5 w-5 text-emerald-500 mr-2" />
+                      <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500 mr-2" />
                       <Badge
                         variant="outline"
-                        className="border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
+                        className="border-emerald-500/20 bg-emerald-500/10 text-emerald-500 text-xs sm:text-sm"
                       >
                         Approved
                       </Badge>
                     </>
                   ) : (
                     <>
-                      <XCircle className="h-5 w-5 text-destructive mr-2" />
+                      <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-destructive mr-2" />
                       <Badge
                         variant="outline"
-                        className="border-destructive/20 bg-destructive/10 text-destructive"
+                        className="border-destructive/20 bg-destructive/10 text-destructive text-xs sm:text-sm"
                       >
                         Not Approved
                       </Badge>

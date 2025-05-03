@@ -94,7 +94,7 @@ export default function LoginPage() {
       <div className="relative flex min-h-screen flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
         {isRedirecting && <Loader message="Redirecting..." size="md" />}
         {/* Dark Mode Toggle */}
-        <div className="absolute right-20 top-12 z-10">
+        <div className="absolute top-5 right-5 sm:right-20 sm:top-12 z-10">
           <ThemeToggle />
         </div>
 

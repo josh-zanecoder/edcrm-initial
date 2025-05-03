@@ -126,21 +126,23 @@ export default function AddActivityModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
+          <DialogTitle className="text-lg sm:text-xl font-semibold">
             {mode === "edit" ? "Edit Activity" : "Add New Activity"}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm sm:text-base">
             {mode === "edit"
               ? "Update the activity details below."
               : "Fill in the activity details below."}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 pt-4">
           <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
+            <Label htmlFor="title" className="text-sm sm:text-base">
+              Title
+            </Label>
             <Input
               id="title"
               value={formData.title}
@@ -148,36 +150,46 @@ export default function AddActivityModal({
               placeholder="Enter activity title"
               required
               disabled={isLoading}
+              className="text-sm sm:text-base"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description" className="text-sm sm:text-base">
+              Description
+            </Label>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => handleChange("description", e.target.value)}
               placeholder="Enter activity description"
-              rows={4}
+              rows={3}
               required
               disabled={isLoading}
+              className="text-sm sm:text-base w-full max-w-full break-all whitespace-pre-wrap resize-none overflow-x-hidden"
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div className="space-y-2">
-              <Label htmlFor="type">Type</Label>
+              <Label htmlFor="type" className="text-sm sm:text-base">
+                Type
+              </Label>
               <Select
                 value={formData.type}
                 onValueChange={(value) => handleChange("type", value)}
                 disabled={isLoading}
               >
-                <SelectTrigger>
+                <SelectTrigger className="text-sm sm:text-base">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.values(ActivityType).map((type) => (
-                    <SelectItem key={type} value={type}>
+                    <SelectItem
+                      key={type}
+                      value={type}
+                      className="text-sm sm:text-base"
+                    >
                       {type}
                     </SelectItem>
                   ))}
@@ -186,18 +198,24 @@ export default function AddActivityModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
+              <Label htmlFor="status" className="text-sm sm:text-base">
+                Status
+              </Label>
               <Select
                 value={formData.status}
                 onValueChange={(value) => handleChange("status", value)}
                 disabled={isLoading}
               >
-                <SelectTrigger>
+                <SelectTrigger className="text-sm sm:text-base">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.values(ActivityStatus).map((status) => (
-                    <SelectItem key={status} value={status}>
+                    <SelectItem
+                      key={status}
+                      value={status}
+                      className="text-sm sm:text-base"
+                    >
                       {status}
                     </SelectItem>
                   ))}
@@ -206,13 +224,13 @@ export default function AddActivityModal({
             </div>
 
             <div className="space-y-2">
-              <Label>Due Date</Label>
+              <Label className="text-sm sm:text-base">Due Date</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal",
+                      "w-full justify-start text-left font-normal text-sm sm:text-base",
                       !formData.dueDate && "text-muted-foreground"
                     )}
                     disabled={isLoading}
@@ -242,16 +260,21 @@ export default function AddActivityModal({
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-4">
             <Button
               variant="outline"
               type="button"
               onClick={onClose}
               disabled={isLoading}
+              className="w-full sm:w-auto text-sm sm:text-base"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full sm:w-auto text-sm sm:text-base"
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

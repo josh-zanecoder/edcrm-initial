@@ -90,7 +90,7 @@ export default function ProspectsPage() {
         setIsLoadingProspects(true);
         const searchParams = new URLSearchParams({
           page: currentPage.toString(),
-          limit: "5",
+          limit: "10",
         });
 
         if (searchQuery) {
@@ -210,15 +210,21 @@ export default function ProspectsPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Prospects</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Prospects
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Manage and track your prospects
           </p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} size="sm">
+        <Button
+          onClick={() => setIsModalOpen(true)}
+          size="sm"
+          className="w-full sm:w-auto"
+        >
           <Plus className="mr-2 h-4 w-4" />
           Add Prospect
         </Button>
@@ -229,7 +235,7 @@ export default function ProspectsPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Filter emails..."
+            placeholder="Search prospects..."
             onChange={(e) => debouncedSearch(e.target.value)}
             className="pl-8"
           />
@@ -244,8 +250,17 @@ export default function ProspectsPage() {
                 <TableRow>
                   <TableHead className="w-5"></TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>College Name</TableHead>
+                  <TableHead className="hidden sm:table-cell">
+                    Contact
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    Location
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">BPPE</TableHead>
+                  <TableHead className="hidden sm:table-cell text-right">
+                    Last Contact
+                  </TableHead>
                   <TableHead className="w-8"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -261,7 +276,16 @@ export default function ProspectsPage() {
                     <TableCell>
                       <Skeleton className="h-4 w-[200px]" />
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="hidden sm:table-cell">
+                      <Skeleton className="h-4 w-24" />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <Skeleton className="h-4 w-24" />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <Skeleton className="h-4 w-24" />
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-right">
                       <Skeleton className="h-4 w-16 ml-auto" />
                     </TableCell>
                     <TableCell className="w-8">
@@ -276,139 +300,153 @@ export default function ProspectsPage() {
       ) : (
         <>
           {/* Desktop Table View */}
-          <div className="hidden md:block">
+          <div className="hidden sm:block">
             <Card>
               <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-5"></TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>College Name</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>BPPE</TableHead>
-                      <TableHead className="text-right">Last Contact</TableHead>
-                      <TableHead className="w-8"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {prospects.map((prospect) => (
-                      <TableRow
-                        key={prospect.id}
-                        className="cursor-pointer hover:bg-accent/50 transition-colors"
-                        onClick={() => handleRowClick(prospect.id)}
-                      >
-                        <TableCell className="w-5"></TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{prospect.status}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium">
-                              {prospect.collegeName}
-                            </span>
-                            <span className="text-sm text-muted-foreground">
-                              {prospect.email}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="hover:text-primary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMakeCall(prospect);
-                            }}
-                            disabled={isCalling}
-                          >
-                            {formatPhoneNumber(prospect.phone)}
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span>{formatAddress(prospect.address)}</span>
-                            <span className="text-sm text-muted-foreground">
-                              {prospect.county} County
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              prospect.bppeApproved ? "outline" : "destructive"
-                            }
-                            className={
-                              prospect.bppeApproved
-                                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
-                                : ""
-                            }
-                          >
-                            {prospect.bppeApproved
-                              ? "Approved"
-                              : "Not Approved"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {new Date(prospect.lastContact).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell
-                          className="w-8"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 p-0"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Open menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRowClick(prospect.id);
-                                }}
-                              >
-                                <User className="mr-2 h-4 w-4" />
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleMakeCall(prospect);
-                                }}
-                              >
-                                <Phone className="mr-2 h-4 w-4" />
-                                Call
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSendEmail(prospect);
-                                }}
-                              >
-                                <Mail className="mr-2 h-4 w-4" />
-                                Send Email
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
+                <div className="overflow-x-auto">
+                  <Table className="min-w-full">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-5"></TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>College Name</TableHead>
+                        <TableHead className="hidden sm:table-cell">
+                          Contact
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Location
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          BPPE
+                        </TableHead>
+                        <TableHead className="hidden sm:table-cell text-right">
+                          Last Contact
+                        </TableHead>
+                        <TableHead className="w-8"></TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {prospects.map((prospect) => (
+                        <TableRow
+                          key={prospect.id}
+                          className="cursor-pointer hover:bg-accent/50 transition-colors"
+                          onClick={() => handleRowClick(prospect.id)}
+                        >
+                          <TableCell className="w-5"></TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{prospect.status}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {prospect.collegeName}
+                              </span>
+                              <span className="text-sm text-muted-foreground">
+                                {prospect.email}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="hover:text-primary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMakeCall(prospect);
+                              }}
+                              disabled={isCalling}
+                            >
+                              {formatPhoneNumber(prospect.phone)}
+                            </Button>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <div className="flex flex-col">
+                              <span>{formatAddress(prospect.address)}</span>
+                              <span className="text-sm text-muted-foreground">
+                                {prospect.county} County
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <Badge
+                              variant={
+                                prospect.bppeApproved
+                                  ? "outline"
+                                  : "destructive"
+                              }
+                              className={
+                                prospect.bppeApproved
+                                  ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
+                                  : ""
+                              }
+                            >
+                              {prospect.bppeApproved
+                                ? "Approved"
+                                : "Not Approved"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell text-right">
+                            {new Date(
+                              prospect.lastContact
+                            ).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell
+                            className="w-8"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                  <span className="sr-only">Open menu</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRowClick(prospect.id);
+                                  }}
+                                >
+                                  <User className="mr-2 h-4 w-4" />
+                                  View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleMakeCall(prospect);
+                                  }}
+                                >
+                                  <Phone className="mr-2 h-4 w-4" />
+                                  Call
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSendEmail(prospect);
+                                  }}
+                                >
+                                  <Mail className="mr-2 h-4 w-4" />
+                                  Send Email
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-destructive">
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
                 {prospects.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-12">
                     <Search className="h-12 w-12 text-muted-foreground" />
@@ -425,17 +463,17 @@ export default function ProspectsPage() {
           </div>
 
           {/* Mobile Card View */}
-          <div className="md:hidden space-y-4">
+          <div className="sm:hidden space-y-3">
             {prospects.map((prospect) => (
               <Card
                 key={prospect.id}
-                className="cursor-pointer hover:bg-accent/50 transition-colors"
+                className="cursor-pointer hover:bg-accent/50 transition-colors p-2"
               >
-                <CardHeader className="pb-2">
+                <CardHeader className="pb-1 px-2">
                   <div className="flex justify-between items-start">
                     <div>
                       <CardTitle
-                        className="hover:text-primary cursor-pointer"
+                        className="hover:text-primary cursor-pointer text-base"
                         onClick={() =>
                           router.push(
                             `/salesperson/prospects/${prospect.id}/details`
@@ -444,88 +482,87 @@ export default function ProspectsPage() {
                       >
                         {prospect.collegeName}
                       </CardTitle>
-                      <CardDescription>
+                      <CardDescription className="text-xs">
                         {prospect.collegeTypes.join(", ")}
                       </CardDescription>
                     </div>
-                    <Badge variant="outline">{prospect.status}</Badge>
+                    <Badge variant="outline" className="text-xs py-0.5 px-2">
+                      {prospect.status}
+                    </Badge>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
+                <CardContent className="space-y-2 px-2 pb-2">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs">
                       <Phone className="h-4 w-4 text-muted-foreground" />
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-auto p-0 hover:text-primary"
+                        className="h-auto p-0 hover:text-primary text-xs"
                         onClick={() => handleMakeCall(prospect)}
                         disabled={isCalling}
                       >
-                        {unformatPhoneNumber(prospect.phone)}
+                        {formatPhoneNumber(prospect.phone)}
                       </Button>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 text-xs">
                       <Mail className="h-4 w-4 text-muted-foreground" />
                       <span>{prospect.email}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 text-xs">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
                       <span>{formatAddress(prospect.address)}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 text-xs">
                       <Globe className="h-4 w-4 text-muted-foreground" />
                       <a
                         href={prospect.website}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-primary hover:underline"
+                        className="text-primary hover:underline break-all"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {formatWebsite(prospect.website)}
                       </a>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 text-xs">
                       <User className="h-4 w-4 text-muted-foreground" />
                       <span>Assigned to {prospect.assignedTo.email}</span>
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center pt-2">
+                  <div className="flex flex-col gap-2 pt-2">
                     <Badge
                       variant={
                         prospect.bppeApproved ? "default" : "destructive"
                       }
                       className={
                         prospect.bppeApproved
-                          ? "bg-green-100 text-green-800"
-                          : ""
+                          ? "bg-green-100 text-green-800 text-xs"
+                          : "text-xs"
                       }
                     >
                       {prospect.bppeApproved
                         ? "BPPE Approved"
                         : "Not BPPE Approved"}
                     </Badge>
-                    <div className="space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          /* TODO: Implement view prospect */
-                        }}
-                      >
-                        View
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          /* TODO: Implement edit prospect */
-                        }}
-                      >
-                        Edit
-                      </Button>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handleRowClick(prospect.id)}
+                    >
+                      View
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handleMakeCall(prospect)}
+                      disabled={isCalling}
+                    >
+                      Call
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -541,16 +578,16 @@ export default function ProspectsPage() {
       />
 
       {/* Pagination */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="text-sm text-muted-foreground">
           Showing{" "}
-          <span className="font-medium">{(currentPage - 1) * 5 + 1}</span> to{" "}
+          <span className="font-medium">{(currentPage - 1) * 10 + 1}</span> to{" "}
           <span className="font-medium">
-            {Math.min(currentPage * 5, totalCount)}
+            {Math.min(currentPage * 10, totalCount)}
           </span>{" "}
           of <span className="font-medium">{totalCount}</span> results
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 justify-center">
           <Button
             variant="outline"
             size="sm"

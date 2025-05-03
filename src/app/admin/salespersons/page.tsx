@@ -69,8 +69,47 @@ export default function SalespersonsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
+        {/* Header Skeleton */}
+        <div className="space-y-2">
+          <Skeleton className="h-8 sm:h-9 w-64" />
+          <Skeleton className="h-5 sm:h-6 w-48" />
+        </div>
+
+        {/* Controls Skeleton */}
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <Skeleton className="h-10 w-full sm:w-[300px]" />
+          <Skeleton className="h-10 w-full sm:w-[140px]" />
+          <Skeleton className="h-10 w-full sm:w-[150px]" />
+        </div>
+
+        {/* Table Skeleton */}
+        <Card className="border-none bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <CardContent className="p-4 sm:p-6">
+            <div className="space-y-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-lg border"
+                >
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <Skeleton className="h-9 w-9 rounded-full" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-4 w-[140px]" />
+                      <Skeleton className="h-3 w-[180px]" />
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 w-full sm:w-auto">
+                    <Skeleton className="h-5 w-[120px]" />
+                    <Skeleton className="h-6 w-[80px]" />
+                    <Skeleton className="h-5 w-[100px]" />
+                    <Skeleton className="h-8 w-[100px] ml-auto" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -86,8 +125,8 @@ export default function SalespersonsPage() {
         <p className="text-muted-foreground">Manage your sales team members</p>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="flex-1 relative">
+      <div className="flex flex-col sm:flex-row items-center gap-4">
+        <div className="flex-1 relative w-full sm:w-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by name or email..."
@@ -97,7 +136,7 @@ export default function SalespersonsPage() {
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-full sm:w-[140px]">
             <SelectValue placeholder="All Status" />
           </SelectTrigger>
           <SelectContent>
@@ -108,7 +147,7 @@ export default function SalespersonsPage() {
         </Select>
         <Button
           onClick={() => setIsModalOpen(true)}
-          className="whitespace-nowrap"
+          className="w-full sm:w-auto whitespace-nowrap"
         >
           <Plus className="mr-2 h-4 w-4" />
           Add Salesperson
@@ -118,16 +157,26 @@ export default function SalespersonsPage() {
       <Card className="border-none bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <CardContent className="p-0">
           {isLoadingSalespersons ? (
-            <div className="p-8">
-              <div className="space-y-6">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-4">
-                    <Skeleton className="h-12 w-12 rounded-full" />
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-4 w-[250px]" />
-                      <Skeleton className="h-4 w-[200px]" />
+            <div className="p-4 sm:p-6">
+              <div className="space-y-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-lg border"
+                  >
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <Skeleton className="h-9 w-9 rounded-full" />
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-4 w-[140px]" />
+                        <Skeleton className="h-3 w-[180px]" />
+                      </div>
                     </div>
-                    <Skeleton className="h-8 w-[100px]" />
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 w-full sm:w-auto">
+                      <Skeleton className="h-5 w-[120px]" />
+                      <Skeleton className="h-6 w-[80px]" />
+                      <Skeleton className="h-5 w-[100px]" />
+                      <Skeleton className="h-8 w-[100px] ml-auto" />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -155,85 +204,146 @@ export default function SalespersonsPage() {
               </div>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead>Name</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Join Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSalespersons.map((person) => (
-                  <TableRow
-                    key={person.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center ring-1 ring-border">
-                          <span className="text-xs font-medium text-primary">
-                            {person.first_name.charAt(0).toUpperCase()}
+            <div className="hidden sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>Name</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Join Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredSalespersons.map((person) => (
+                    <TableRow
+                      key={person.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center ring-1 ring-border">
+                            <span className="text-xs font-medium text-primary">
+                              {person.first_name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="space-y-0.5">
+                            <div className="font-medium">
+                              {person.first_name} {person.last_name}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {person.email}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span>{person.phone}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            person.status === "active" ? "default" : "secondary"
+                          }
+                          className={
+                            person.status === "active"
+                              ? "bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25"
+                              : "bg-muted hover:bg-muted/80"
+                          }
+                        >
+                          {person.status.charAt(0).toUpperCase() +
+                            person.status.slice(1)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span>
+                            {new Date(person.joinDate).toLocaleDateString()}
                           </span>
                         </div>
-                        <div className="space-y-0.5">
-                          <div className="font-medium">
-                            {person.first_name} {person.last_name}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {person.email}
-                          </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            router.push(`/admin/salespersons/${person.id}`)
+                          }
+                          className="hover:bg-primary/10 hover:text-primary"
+                        >
+                          View Details
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {/* Mobile View */}
+          {!isLoadingSalespersons &&
+            !error &&
+            filteredSalespersons.length > 0 && (
+              <div className="block sm:hidden space-y-4">
+                {filteredSalespersons.map((person) => (
+                  <div
+                    key={person.id}
+                    className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-lg border cursor-pointer hover:bg-muted/50"
+                    onClick={() =>
+                      router.push(`/admin/salespersons/${person.id}`)
+                    }
+                  >
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center ring-1 ring-border">
+                        <span className="text-xs font-medium text-primary">
+                          {person.first_name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="space-y-0.5 flex-1">
+                        <div className="font-medium">
+                          {person.first_name} {person.last_name}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {person.email}
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 w-full sm:w-auto">
                       <div className="flex items-center gap-2 text-sm">
                         <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                         <span>{person.phone}</span>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          person.status === "active" ? "default" : "secondary"
-                        }
-                        className={
-                          person.status === "active"
-                            ? "bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25"
-                            : "bg-muted hover:bg-muted/80"
-                        }
-                      >
-                        {person.status.charAt(0).toUpperCase() +
-                          person.status.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
                       <div className="flex items-center gap-2 text-sm">
                         <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                         <span>
                           {new Date(person.joinDate).toLocaleDateString()}
                         </span>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          router.push(`/admin/salespersons/${person.id}`)
+                      <Badge
+                        variant={
+                          person.status === "active" ? "default" : "secondary"
                         }
-                        className="hover:bg-primary/10 hover:text-primary"
+                        className={
+                          person.status === "active"
+                            ? "w-fit bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25"
+                            : "w-fit bg-muted hover:bg-muted/80"
+                        }
                       >
-                        View Details
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                        {person.status.charAt(0).toUpperCase() +
+                          person.status.slice(1)}
+                      </Badge>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
-          )}
+              </div>
+            )}
         </CardContent>
       </Card>
 
