@@ -53,4 +53,5 @@ export type UserStore = {
   colleges: College[];
   userData: UserData | null;
   getUser: () => Promise<void>;
+  fetchColleges: () => Promise<void>;
 };
