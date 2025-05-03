@@ -10,6 +10,7 @@
     "tunnel": "node ngrok.js"
   },
   "dependencies": {
+    "@getbrevo/brevo": "^2.2.0",
     "@headlessui/react": "^2.2.2",
     "@heroicons/react": "^2.2.0",
     "@radix-ui/react-avatar": "^1.1.7",

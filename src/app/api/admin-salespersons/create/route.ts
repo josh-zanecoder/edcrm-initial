@@ -8,12 +8,13 @@ import { sendCredentialEmail } from '@/lib/sendCredentialEmail';
 import { SalesPersonModel } from '@/models/SalesPerson';
 import { UserModel } from '@/models/User';
 import connectToMongoDB from '@/lib/mongoose';
-
+  
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 export async function POST(request: Request) {
   let session;
+  let firebaseUser;
   
   try {
     const body = await request.json();
@@ -41,7 +42,6 @@ export async function POST(request: Request) {
     }
 
     // Create Firebase user
-    let firebaseUser;
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       firebaseUser = userCredential.user;
@@ -84,10 +84,15 @@ export async function POST(request: Request) {
         newSalesperson.save({ session })
       ]);
 
-      // Send welcome email
-      await sendCredentialEmail(email, `${first_name} ${last_name}`, password);
+      // Try to send welcome email before committing
+      try {
+        await sendCredentialEmail(email, `${first_name} ${last_name}`, password);
+      } catch (emailError) {
+        // If email fails, throw error to trigger rollback
+        throw new Error('Failed to send welcome email: ' + (emailError instanceof Error ? emailError.message : 'Unknown error'));
+      }
 
-      // Commit the transaction
+      // Only commit if everything succeeded including email
       await session.commitTransaction();
 
       return NextResponse.json(
@@ -102,7 +107,9 @@ export async function POST(request: Request) {
       // Rollback transaction and cleanup Firebase user
       await session.abortTransaction();
       try {
-        await firebaseUser.delete();
+        if (firebaseUser) {
+          await firebaseUser.delete();
+        }
       } catch (deleteError) {
         console.error('Failed to cleanup Firebase user after error:', deleteError);
       }

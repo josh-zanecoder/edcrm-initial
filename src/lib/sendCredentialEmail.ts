@@ -1,42 +1,45 @@
-import nodemailer from 'nodemailer';
+import * as Brevo from '@getbrevo/brevo';
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_APP_PASSWORD
-  }
-});
+const apiInstance = new Brevo.TransactionalEmailsApi();
 
-export async function sendCredentialEmail(to: string, name: string, password: string) {
+apiInstance.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY as string);
+
+export async function sendCredentialEmail(
+  toEmail: string,
+  fullName: string,
+  password: string
+) {
+  const sendSmtpEmail = {
+    to: [{ email: toEmail, name: fullName }],
+    sender: { name: 'Your Company', email: 'josh@zanecoder.com' },
+    subject: 'Your Sales Account Credentials',
+    htmlContent: `
+      <h3>Welcome ${fullName},</h3>
+      <p>Your sales account has been created.</p>
+      <p><strong>Email:</strong> ${toEmail}</p>
+      <p><strong>Password:</strong> ${password}</p>
+      <p>Please log in and change your password as soon as possible.</p>
+    `
+  };
+
   try {
-    const mailOptions = {
-      from: {
-        name: 'EDTRACTS CRM',
-        address: 'noreply@zanecoder.com'
-      },
-      to,
-      subject: 'Welcome to EDCRM - Your Account Credentials',
-      html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Welcome to EDCRM, ${name}! 🎉</h2>
-          <p>Your account has been successfully created. Here are your login credentials:</p>
-          <div style="background-color: #f4f4f4; padding: 20px; border-radius: 5px; margin: 20px 0;">
-            <p><strong>Email:</strong> ${to}</p>
-            <p><strong>Password:</strong> ${password}</p>
-          </div>
-          <p style="color: #666;">For security reasons, we recommend changing your password after your first login.</p>
-          <p>You can log in to your account at: <a href="${process.env.NEXT_PUBLIC_APP_URL}/login">${process.env.NEXT_PUBLIC_APP_URL}/login</a></p>
-          <p>If you have any questions or need assistance, please contact your administrator.</p>
-          <p>Best regards,<br>EDCRM Team</p>
-        </div>
-      `
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    return info;
-  } catch (error) {
-    console.error('Failed to send credential email:', error);
-    throw error;
+    const response = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    console.log('Email sent successfully:', response);
+  } catch (error: any) {
+    // Enhanced error logging
+    console.error('Brevo API Error Details:', {
+      message: error?.response?.body?.message || error.message,
+      code: error?.response?.body?.code,
+      body: error?.response?.body,
+      statusCode: error?.response?.status,
+      headers: error?.response?.headers
+    });
+    
+    // Construct a detailed error message
+    const errorDetails = error?.response?.body
+      ? `Brevo API Error: ${error.response.body.code} - ${error.response.body.message}`
+      : error.message || 'Unknown error';
+      
+    throw new Error(errorDetails);
   }
 }
