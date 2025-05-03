@@ -1,6 +1,10 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Plus, CheckCircle2, Clock } from "lucide-react";
 
 export default function AdminDashboard() {
   const { user, isLoading } = useAuth();
@@ -18,147 +22,92 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6 px-5">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900">
-          Sales Team Management
-        </h1>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Sales Team Management
+          </h1>
+          <p className="text-muted-foreground">
+            Monitor and manage your sales team
+          </p>
+        </div>
       </div>
 
       {/* Sales Team Activity */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:px-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">
-            Recent Sales Team Activity
-          </h3>
-        </div>
-        <div className="border-t border-gray-200">
-          <div className="px-4 py-5 sm:p-6">
-            <div className="flow-root">
-              <ul className="-mb-8">
-                <li>
-                  <div className="relative pb-8">
-                    <span
-                      className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
-                      aria-hidden="true"
-                    ></span>
-                    <div className="relative flex space-x-3">
-                      <div>
-                        <span className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center ring-8 ring-white">
-                          <svg
-                            className="h-5 w-5 text-white"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                            />
-                          </svg>
-                        </span>
-                      </div>
-                      <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                        <div>
-                          <p className="text-sm text-gray-500">
-                            New salesperson{" "}
-                            <span className="font-medium text-gray-900">
-                              John Doe
-                            </span>{" "}
-                            was added to the team
-                          </p>
-                        </div>
-                        <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                          <time dateTime="2024-04-27">1h ago</time>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-                <li>
-                  <div className="relative pb-8">
-                    <span
-                      className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
-                      aria-hidden="true"
-                    ></span>
-                    <div className="relative flex space-x-3">
-                      <div>
-                        <span className="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center ring-8 ring-white">
-                          <svg
-                            className="h-5 w-5 text-white"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                        </span>
-                      </div>
-                      <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                        <div>
-                          <p className="text-sm text-gray-500">
-                            Sales target achieved by{" "}
-                            <span className="font-medium text-gray-900">
-                              Jane Smith
-                            </span>
-                          </p>
-                        </div>
-                        <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                          <time dateTime="2024-04-26">2h ago</time>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-                <li>
-                  <div className="relative pb-8">
-                    <div className="relative flex space-x-3">
-                      <div>
-                        <span className="h-8 w-8 rounded-full bg-yellow-500 flex items-center justify-center ring-8 ring-white">
-                          <svg
-                            className="h-5 w-5 text-white"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                        </span>
-                      </div>
-                      <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                        <div>
-                          <p className="text-sm text-gray-500">
-                            Monthly review completed for{" "}
-                            <span className="font-medium text-gray-900">
-                              Mike Johnson
-                            </span>
-                          </p>
-                        </div>
-                        <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                          <time dateTime="2024-04-25">1d ago</time>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              </ul>
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Sales Team Activity</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-8">
+            {/* Activity Item 1 */}
+            <div className="relative flex items-start gap-4">
+              <div className="relative">
+                <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+                  <Plus className="h-4 w-4 text-primary-foreground" />
+                </div>
+                <div className="absolute left-4 top-8 h-full w-0.5 bg-border" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="text-sm text-muted-foreground">
+                  New salesperson{" "}
+                  <span className="font-medium text-foreground">John Doe</span>{" "}
+                  was added to the team
+                </p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <time dateTime="2024-04-27">1h ago</time>
+                </div>
+              </div>
+            </div>
+
+            {/* Activity Item 2 */}
+            <div className="relative flex items-start gap-4">
+              <div className="relative">
+                <div className="h-8 w-8 rounded-full bg-emerald-500 flex items-center justify-center">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-50" />
+                </div>
+                <div className="absolute left-4 top-8 h-full w-0.5 bg-border" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="text-sm text-muted-foreground">
+                  Sales target achieved by{" "}
+                  <span className="font-medium text-foreground">
+                    Jane Smith
+                  </span>
+                </p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <time dateTime="2024-04-26">2h ago</time>
+                </div>
+              </div>
+            </div>
+
+            {/* Activity Item 3 */}
+            <div className="relative flex items-start gap-4">
+              <div className="relative">
+                <div className="h-8 w-8 rounded-full bg-amber-500 flex items-center justify-center">
+                  <Clock className="h-4 w-4 text-amber-50" />
+                </div>
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="text-sm text-muted-foreground">
+                  Monthly review completed for{" "}
+                  <span className="font-medium text-foreground">
+                    Mike Johnson
+                  </span>
+                </p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <time dateTime="2024-04-25">1d ago</time>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

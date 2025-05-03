@@ -21,6 +21,13 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
+const PROSPECT_TABS = [
+  "details",
+  "members",
+  "reminders",
+  "activities",
+] as const;
+
 export function CollegeSwitcher({
   colleges,
 }: {
@@ -34,16 +41,20 @@ export function CollegeSwitcher({
   const { isMobile, setOpenMobile } = useSidebar();
   const pathname = usePathname();
 
-  // Find active college based on URL
-  const activeCollege = React.useMemo(() => {
+  // Find active college and tab based on URL
+  const { activeCollege, activeTab } = React.useMemo(() => {
     const pathParts = pathname.split("/");
-    const isCollegeDetailsPage =
-      pathParts.includes("prospects") && pathParts.includes("details");
-    if (!isCollegeDetailsPage) return null;
+    const isProspectPage = pathParts.includes("prospects");
+    if (!isProspectPage) return { activeCollege: null, activeTab: null };
 
     const collegeIdIndex = pathParts.indexOf("prospects") + 1;
     const collegeId = pathParts[collegeIdIndex];
-    return colleges.find((c) => c.id === collegeId) || null;
+    const tab = pathParts[collegeIdIndex + 1] as (typeof PROSPECT_TABS)[number];
+
+    return {
+      activeCollege: colleges.find((c) => c.id === collegeId) || null,
+      activeTab: PROSPECT_TABS.includes(tab) ? tab : "details",
+    };
   }, [pathname, colleges]);
 
   const defaultCollege = {
@@ -89,7 +100,9 @@ export function CollegeSwitcher({
               {colleges.map((college, index) => (
                 <Link
                   key={college.id}
-                  href={`/salesperson/prospects/${college.id}/details`}
+                  href={`/salesperson/prospects/${college.id}/${
+                    activeTab || "details"
+                  }`}
                   onClick={() => isMobile && setOpenMobile(false)}
                 >
                   <DropdownMenuItem className="gap-2 p-2">

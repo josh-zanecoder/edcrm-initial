@@ -1,227 +1,233 @@
-import { Fragment, useState, useEffect } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
-import { Member, MemberRole } from '@/types/member';
-import { formatPhoneNumber } from '@/utils/formatters';
+"use client";
+
+import { useState, useEffect } from "react";
+import { Member, MemberRole } from "@/types/member";
+import { formatPhoneNumber } from "@/utils/formatters";
+import { X, Loader2 } from "lucide-react";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+
 interface AddMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (member: Omit<Member, '_id' | 'createdAt' | 'updatedAt' | 'addedBy'>) => void;
+  onSave: (
+    member: Omit<Member, "_id" | "createdAt" | "updatedAt" | "addedBy">
+  ) => void;
   prospectId: string;
   collegeName: string;
   initialData?: Partial<Member>;
-  mode?: 'add' | 'edit';
+  mode?: "add" | "edit";
 }
 
-export default function AddMemberModal({
+export default function AddEditMemberModal({
   isOpen,
   onClose,
   onSave,
   prospectId,
   collegeName,
   initialData,
-  mode = 'add',
+  mode = "add",
 }: AddMemberModalProps) {
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    phone: '',
-    email: '',
-    role: MemberRole.Other
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+    role: MemberRole.Other,
   });
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (initialData) {
       setFormData({
-        firstName: initialData.firstName || '',
-        lastName: initialData.lastName || '',
-        phone: initialData.phone ? formatPhoneNumber(initialData.phone) : '',
-        email: initialData.email || '',
-        role: initialData.role || MemberRole.Other
+        firstName: initialData.firstName || "",
+        lastName: initialData.lastName || "",
+        phone: initialData.phone ? formatPhoneNumber(initialData.phone) : "",
+        email: initialData.email || "",
+        role: initialData.role || MemberRole.Other,
       });
     } else {
       setFormData({
-        firstName: '',
-        lastName: '',
-        phone: '',
-        email: '',
-        role: MemberRole.Other
+        firstName: "",
+        lastName: "",
+        phone: "",
+        email: "",
+        role: MemberRole.Other,
       });
     }
   }, [initialData, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Remove formatting before submitting
-    const unformattedPhone = formData.phone.replace(/\D/g, '');
-    onSave({
-      ...formData,
-      phone: unformattedPhone,
-      prospectId,
-      collegeName
-    });
+    setIsLoading(true);
+    const loadingToast = toast.loading("Saving member...");
+    try {
+      // Remove formatting before submitting
+      const unformattedPhone = formData.phone.replace(/\D/g, "");
+      await onSave({
+        ...formData,
+        phone: unformattedPhone,
+        prospectId,
+        collegeName,
+      });
+      toast.success(
+        mode === "edit"
+          ? "Member updated successfully"
+          : "Member added successfully",
+        {
+          id: loadingToast,
+        }
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (field: string, value: string) => {
-    if (field === 'phone') {
+    if (field === "phone") {
       // Limit to 14 characters (including formatting)
-      if (value.replace(/\D/g, '').length <= 10) {
-        setFormData(prev => ({
+      if (value.replace(/\D/g, "").length <= 10) {
+        setFormData((prev) => ({
           ...prev,
-          [field]: formatPhoneNumber(value)
+          [field]: formatPhoneNumber(value),
         }));
       }
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        [field]: value
+        [field]: value,
       }));
     }
   };
 
   return (
-    <Transition.Root show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={onClose}>
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
-        </Transition.Child>
-
-        <div className="fixed inset-0 z-10 overflow-y-auto">
-          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-              enterTo="opacity-100 translate-y-0 sm:scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 translate-y-0 sm:scale-100"
-              leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-xl font-semibold">
+              {mode === "edit" ? "Edit Member" : "Add New Member"}
+            </DialogTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-background"
+              onClick={onClose}
             >
-              <Dialog.Panel className="relative transform overflow-hidden rounded-2xl bg-white/95 px-8 pb-8 pt-5 text-left shadow-xl transition-all w-full max-w-lg">
-                <div className="absolute right-0 top-0 pr-4 pt-4">
-                  <button
-                    type="button"
-                    className="rounded-md bg-transparent text-gray-400 hover:text-gray-500"
-                    onClick={onClose}
-                  >
-                    <span className="sr-only">Close</span>
-                    <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-                  </button>
-                </div>
-
-                <Dialog.Title
-                  as="h3"
-                  className="text-2xl font-semibold leading-6 text-gray-900 mb-8"
-                >
-                  {mode === 'edit' ? 'Edit Member' : 'Add New Member'}
-                </Dialog.Title>
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1.5">
-                        First Name
-                      </label>
-                      <input
-                        type="text"
-                        id="firstName"
-                        value={formData.firstName}
-                        onChange={(e) => handleChange('firstName', e.target.value)}
-                        className="w-full px-4 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1.5">
-                        Last Name
-                      </label>
-                      <input
-                        type="text"
-                        id="lastName"
-                        value={formData.lastName}
-                        onChange={(e) => handleChange('lastName', e.target.value)}
-                        className="w-full px-4 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      value={formData.email}
-                      onChange={(e) => handleChange('email', e.target.value)}
-                      className="w-full px-4 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Phone
-                    </label>
-                    <input
-                      type="tel"
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => handleChange('phone', e.target.value)}
-                      className="w-full px-4 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Role
-                    </label>
-                    <select
-                      id="role"
-                      value={formData.role}
-                      onChange={(e) => handleChange('role', e.target.value)}
-                      className="w-full px-4 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      required
-                    >
-                      {Object.values(MemberRole).map((role) => (
-                        <option key={role} value={role}>
-                          {role}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="mt-8 flex justify-end gap-3">
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      className="px-6 py-2.5 text-base font-medium rounded-xl bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors duration-200"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-6 py-2.5 text-base font-medium rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
-                    >
-                      {mode === 'edit' ? 'Save Changes' : 'Add Member'}
-                    </button>
-                  </div>
-                </form>
-              </Dialog.Panel>
-            </Transition.Child>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-        </div>
-      </Dialog>
-    </Transition.Root>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name</Label>
+              <Input
+                id="firstName"
+                value={formData.firstName}
+                onChange={(e) => handleChange("firstName", e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                value={formData.lastName}
+                onChange={(e) => handleChange("lastName", e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => handleChange("email", e.target.value)}
+              required
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone</Label>
+            <Input
+              id="phone"
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => handleChange("phone", e.target.value)}
+              placeholder="(XXX) XXX-XXXX"
+              required
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="role">Role</Label>
+            <Select
+              value={formData.role}
+              onValueChange={(value) => handleChange("role", value)}
+              disabled={isLoading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a role" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(MemberRole).map((role) => (
+                  <SelectItem key={role} value={role}>
+                    {role}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={onClose}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {mode === "edit" ? "Saving..." : "Adding..."}
+                </>
+              ) : mode === "edit" ? (
+                "Save Changes"
+              ) : (
+                "Add Member"
+              )}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
-} 
+}

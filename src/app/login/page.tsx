@@ -34,16 +34,24 @@ export default function LoginPage() {
       return;
     }
 
+    setIsResettingPassword(true);
+    const loadingToast = toast.loading("Sending password reset link...");
+
     try {
-      setIsResettingPassword(true);
       await resetPassword(email);
-      toast.success("Password reset link sent to your email");
+      toast.success("Password reset link sent to your email", {
+        id: loadingToast,
+      });
       setIsForgotPassword(false);
     } catch (error: any) {
       if (error?.message?.includes("auth/user-not-found")) {
-        toast.error("No account found with this email");
+        toast.error("No account found with this email", {
+          id: loadingToast,
+        });
       } else {
-        toast.error("Failed to send reset link. Please try again");
+        toast.error("Failed to send reset link. Please try again", {
+          id: loadingToast,
+        });
         console.error("Password reset error:", error);
       }
     } finally {
@@ -54,6 +62,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    const loadingToast = toast.loading("Signing in...");
 
     try {
       if (!email || !password) {
@@ -65,11 +74,15 @@ export default function LoginPage() {
       }
       await login({ email, password });
       setIsRedirecting(true);
-      toast.success("Successfully signed in!");
+      toast.success("Successfully signed in!", {
+        id: loadingToast,
+      });
     } catch (error: any) {
       console.log(error);
       const message = getFirebaseAuthErrorMessage(error);
-      toast.error(message);
+      toast.error(message, {
+        id: loadingToast,
+      });
       console.log("Login error:", message);
     } finally {
       setIsLoading(false);

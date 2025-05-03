@@ -1,15 +1,35 @@
-import { Fragment, useState, useEffect } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
-import { Reminder, ReminderType, ReminderStatus } from '@/types/reminder';
+import { useState, useEffect } from "react";
+import { Reminder, ReminderType, ReminderStatus } from "@/types/reminder";
+import { X, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface AddReminderModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (reminder: Omit<Reminder, '_id' | 'createdAt' | 'updatedAt' | 'addedBy'>) => void;
+  onSave: (
+    reminder: Omit<Reminder, "_id" | "createdAt" | "updatedAt" | "addedBy">
+  ) => void;
   prospectId: string;
   initialData?: Partial<Reminder>;
-  mode?: 'add' | 'edit';
+  mode?: "add" | "edit";
 }
 
 export default function AddReminderModal({
@@ -18,204 +38,205 @@ export default function AddReminderModal({
   onSave,
   prospectId,
   initialData,
-  mode = 'add',
+  mode = "add",
 }: AddReminderModalProps) {
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
+    title: "",
+    description: "",
     type: ReminderType.EMAIL,
     status: ReminderStatus.PENDING,
-    dueDate: new Date().toISOString().split('T')[0],
-    isActive: true
+    dueDate: new Date().toISOString().split("T")[0],
+    isActive: true,
   });
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (initialData) {
       setFormData({
-        title: initialData.title || '',
-        description: initialData.description || '',
+        title: initialData.title || "",
+        description: initialData.description || "",
         type: initialData.type || ReminderType.EMAIL,
         status: initialData.status || ReminderStatus.PENDING,
-        dueDate: initialData.dueDate ? new Date(initialData.dueDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        isActive: initialData.isActive ?? true
+        dueDate: initialData.dueDate
+          ? new Date(initialData.dueDate).toISOString().split("T")[0]
+          : new Date().toISOString().split("T")[0],
+        isActive: initialData.isActive ?? true,
       });
     } else {
       setFormData({
-        title: '',
-        description: '',
+        title: "",
+        description: "",
         type: ReminderType.EMAIL,
         status: ReminderStatus.PENDING,
-        dueDate: new Date().toISOString().split('T')[0],
-        isActive: true
+        dueDate: new Date().toISOString().split("T")[0],
+        isActive: true,
       });
     }
   }, [initialData, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
-      ...formData,
-      dueDate: new Date(formData.dueDate),
-      prospectId
-    });
+
+    setIsLoading(true);
+    const loadingToast = toast.loading("Saving reminder...");
+
+    try {
+      await onSave({
+        ...formData,
+        dueDate: new Date(formData.dueDate),
+        prospectId,
+      });
+      toast.success(
+        mode === "edit"
+          ? "Reminder updated successfully"
+          : "Reminder added successfully",
+        {
+          id: loadingToast,
+        }
+      );
+    } catch (error) {
+      toast.error(
+        mode === "edit"
+          ? "Failed to update reminder"
+          : "Failed to add reminder",
+        {
+          id: loadingToast,
+        }
+      );
+      console.error("Error saving reminder:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
   return (
-    <Transition.Root show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={onClose}>
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
-        </Transition.Child>
-
-        <div className="fixed inset-0 z-10 overflow-y-auto">
-          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-              enterTo="opacity-100 translate-y-0 sm:scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 translate-y-0 sm:scale-100"
-              leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-xl font-semibold">
+              {mode === "edit" ? "Edit Reminder" : "Add New Reminder"}
+            </DialogTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-background"
+              onClick={onClose}
             >
-              <Dialog.Panel className="relative transform overflow-hidden rounded-2xl bg-white/95 px-8 pb-8 pt-5 text-left shadow-xl transition-all w-full max-w-lg">
-                <div className="absolute right-0 top-0 pr-4 pt-4">
-                  <button
-                    type="button"
-                    className="rounded-md bg-transparent text-gray-400 hover:text-gray-500"
-                    onClick={onClose}
-                  >
-                    <span className="sr-only">Close</span>
-                    <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-                  </button>
-                </div>
-
-                <Dialog.Title
-                  as="h3"
-                  className="text-2xl font-semibold leading-6 text-gray-900 mb-8"
-                >
-                  {mode === 'edit' ? 'Edit Reminder' : 'Add New Reminder'}
-                </Dialog.Title>
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div>
-                    <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Title
-                    </label>
-                    <input
-                      type="text"
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) => handleChange('title', e.target.value)}
-                      className="w-full px-4 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Description
-                    </label>
-                    <textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => handleChange('description', e.target.value)}
-                      className="w-full px-4 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      rows={4}
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1.5">
-                        Type
-                      </label>
-                      <select
-                        id="type"
-                        value={formData.type}
-                        onChange={(e) => handleChange('type', e.target.value)}
-                        className="w-full px-4 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                        required
-                      >
-                        {Object.values(ReminderType).map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1.5">
-                        Status
-                      </label>
-                      <select
-                        id="status"
-                        value={formData.status}
-                        onChange={(e) => handleChange('status', e.target.value)}
-                        className="w-full px-4 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                        required
-                      >
-                        {Object.values(ReminderStatus).map((status) => (
-                          <option key={status} value={status}>
-                            {status}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Due Date
-                    </label>
-                    <input
-                      type="date"
-                      id="dueDate"
-                      value={formData.dueDate}
-                      onChange={(e) => handleChange('dueDate', e.target.value)}
-                      className="w-full px-4 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-
-                  <div className="mt-8 flex justify-end gap-3">
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      className="px-6 py-2.5 text-base font-medium rounded-xl bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors duration-200"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-6 py-2.5 text-base font-medium rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
-                    >
-                      {mode === 'edit' ? 'Save Changes' : 'Add Reminder'}
-                    </button>
-                  </div>
-                </form>
-              </Dialog.Panel>
-            </Transition.Child>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-        </div>
-      </Dialog>
-    </Transition.Root>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+          <div className="space-y-2">
+            <Label htmlFor="title">Title</Label>
+            <Input
+              id="title"
+              value={formData.title}
+              onChange={(e) => handleChange("title", e.target.value)}
+              required
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => handleChange("description", e.target.value)}
+              rows={4}
+              required
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="type">Type</Label>
+              <Select
+                value={formData.type}
+                onValueChange={(value) => handleChange("type", value)}
+                disabled={isLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(ReminderType).map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => handleChange("status", value)}
+                disabled={isLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(ReminderStatus).map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="dueDate">Due Date</Label>
+            <Input
+              type="date"
+              id="dueDate"
+              value={formData.dueDate}
+              onChange={(e) => handleChange("dueDate", e.target.value)}
+              required
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={onClose}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {mode === "edit" ? "Saving..." : "Adding..."}
+                </>
+              ) : mode === "edit" ? (
+                "Save Changes"
+              ) : (
+                "Add Reminder"
+              )}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

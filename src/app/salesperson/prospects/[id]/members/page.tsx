@@ -1,24 +1,42 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Member } from '@/types/member';
-import AddEditMemberModal from '@/components/salesperson/AddEditMemberModal';
-import { 
-  UserIcon, 
-  EnvelopeIcon, 
-  PhoneIcon,
-  TrashIcon,
-  PencilIcon,
-  ExclamationCircleIcon
-} from '@heroicons/react/24/outline';
-import { toast } from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import { Member } from "@/types/member";
+import AddEditMemberModal from "@/components/salesperson/AddEditMemberModal";
+import {
+  Users2,
+  Mail,
+  Phone,
+  Trash2,
+  Pencil,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function displayPhone(phone: string) {
-  const digits = phone.replace(/\D/g, '');
+  const digits = phone.replace(/\D/g, "");
   if (digits.length === 10) {
     return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
   }
   return phone;
+}
+
+function getInitials(firstName: string, lastName: string) {
+  return `${firstName[0]}${lastName[0]}`.toUpperCase();
 }
 
 interface PageProps {
@@ -32,7 +50,7 @@ export default function MembersPage({ params }: PageProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [collegeName, setCollegeName] = useState('');
+  const [collegeName, setCollegeName] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
 
@@ -40,11 +58,11 @@ export default function MembersPage({ params }: PageProps) {
     try {
       setError(null);
       setIsLoading(true);
-      
+
       // Fetch prospect details first to get the college name
       const prospectResponse = await fetch(`/api/prospects/${id}/details`);
       if (!prospectResponse.ok) {
-        throw new Error('Failed to fetch prospect details');
+        throw new Error("Failed to fetch prospect details");
       }
       const prospectData = await prospectResponse.json();
       setCollegeName(prospectData.collegeName);
@@ -53,13 +71,13 @@ export default function MembersPage({ params }: PageProps) {
       const membersResponse = await fetch(`/api/prospects/${id}/members`);
       if (!membersResponse.ok) {
         const errorData = await membersResponse.json();
-        throw new Error(errorData.error || 'Failed to fetch members');
+        throw new Error(errorData.error || "Failed to fetch members");
       }
       const membersData = await membersResponse.json();
       setMembers(membersData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      toast.error('Failed to load members');
+      setError(err instanceof Error ? err.message : "An error occurred");
+      toast.error("Failed to load members");
     } finally {
       setIsLoading(false);
     }
@@ -71,43 +89,51 @@ export default function MembersPage({ params }: PageProps) {
     }
   }, [id, fetchMembers]);
 
-  const handleAddMember = async (member: Omit<Member, '_id' | 'createdAt' | 'updatedAt' | 'addedBy'>) => {
+  const handleAddMember = async (
+    member: Omit<Member, "_id" | "createdAt" | "updatedAt" | "addedBy">
+  ) => {
     try {
       const response = await fetch(`/api/prospects/${id}/members`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(member),
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add member');
+        throw new Error(errorData.error || "Failed to add member");
       }
       setIsModalOpen(false);
-      toast.success('Member added successfully');
       await fetchMembers();
     } catch (err) {
-      console.error('Error adding member:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to add member');
+      console.error("Error adding member:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to add member");
     }
   };
 
   const handleDeleteMember = async (memberId: string) => {
+    const loadingToast = toast.loading("Deleting member...");
     try {
       const response = await fetch(`/api/prospects/${id}/members/${memberId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete member');
+        throw new Error(errorData.error || "Failed to delete member");
       }
 
       // Optimistically update the UI
-      setMembers(prevMembers => prevMembers.filter(member => member._id !== memberId));
-      toast.success('Member removed successfully');
+      setMembers((prevMembers) =>
+        prevMembers.filter((member) => member._id !== memberId)
+      );
+      toast.success("Member removed successfully", {
+        id: loadingToast,
+      });
     } catch (err) {
-      console.error('Error deleting member:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to delete member');
+      console.error("Error deleting member:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Failed to delete member"
+      );
       // Refresh the list to ensure consistency
       fetchMembers();
     }
@@ -118,132 +144,204 @@ export default function MembersPage({ params }: PageProps) {
     setIsEditModalOpen(true);
   };
 
-  const handleEditMember = async (member: Omit<Member, '_id' | 'createdAt' | 'updatedAt' | 'addedBy'>) => {
+  const handleEditMember = async (
+    member: Omit<Member, "_id" | "createdAt" | "updatedAt" | "addedBy">
+  ) => {
     if (!editingMember) return;
     try {
-      const response = await fetch(`/api/prospects/${id}/members/${editingMember._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(member),
-      });
+      const response = await fetch(
+        `/api/prospects/${id}/members/${editingMember._id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(member),
+        }
+      );
 
       const responseData = await response.json();
 
       if (!response.ok) {
-        console.error('Update failed:', responseData);
-        throw new Error(responseData.error || 'Failed to update member');
+        console.error("Update failed:", responseData);
+        throw new Error(responseData.error || "Failed to update member");
       }
 
       setIsEditModalOpen(false);
       setEditingMember(null);
-      toast.success('Member updated successfully');
       await fetchMembers();
     } catch (err) {
-      console.error('Error updating member:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to update member');
+      console.error("Error updating member:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update member"
+      );
     }
   };
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-5" />
+            <Skeleton className="h-6 w-40" />
+          </div>
+          <Skeleton className="h-9 w-24" />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card
+              key={i}
+              className="overflow-hidden border-border/5 bg-card shadow-none"
+            >
+              <CardHeader className="border-b border-border/5 bg-card p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <div>
+                      <Skeleton className="h-5 w-32 mb-2" />
+                      <Skeleton className="h-5 w-20" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-8 w-8" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2 bg-card p-4 pt-3">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-4 w-48" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-center px-4">
-        <ExclamationCircleIcon className="h-12 w-12 text-red-500 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Members</h3>
-        <p className="text-gray-500 mb-4">{error}</p>
-        <button
+      <Alert variant="destructive" className="mx-auto max-w-2xl">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error Loading Members</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+        <Button
+          variant="outline"
+          size="sm"
           onClick={fetchMembers}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+          className="mt-2"
         >
           Try Again
-        </button>
-      </div>
+        </Button>
+      </Alert>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl p-6 mb-6">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <UserIcon className="h-7 w-7 text-blue-600" />
-            <h1 className="text-2xl font-semibold text-gray-900">College Staff Members</h1>
-          </div>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="px-6 py-2.5 text-base font-medium rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
-          >
-            Add Member
-          </button>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Users2 className="h-5 w-5 text-primary" />
+          <h1 className="text-lg font-medium">College Staff Members</h1>
         </div>
+        <Button onClick={() => setIsModalOpen(true)} size="sm">
+          Add Member
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {members.map((member) => (
-          <div key={member._id} className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900">
-                  {member.firstName} {member.lastName}
-                </h3>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700 mt-2">
-                  {member.role}
-                </span>
+          <Card
+            key={member._id}
+            className="overflow-hidden border-border/5 bg-card shadow-none"
+          >
+            <CardHeader className="border-b border-border/5 bg-card p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="border border-border/5 bg-primary/10 text-sm text-primary">
+                      {getInitials(member.firstName, member.lastName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="text-sm font-medium text-card-foreground">
+                      {member.firstName} {member.lastName}
+                    </h3>
+                    <Badge
+                      variant="secondary"
+                      className="mt-1 text-xs font-normal"
+                    >
+                      {member.role}
+                    </Badge>
+                  </div>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
+                    >
+                      <span className="sr-only">Open menu</span>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => handleEditClick(member)}
+                      className="gap-2"
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Edit Member
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleDeleteMember(member._id)}
+                      className="gap-2 text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete Member
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleDeleteMember(member._id)}
-                  className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-50 transition-colors duration-200"
-                >
-                  <TrashIcon className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => handleEditClick(member)}
-                  className="p-2 text-gray-400 hover:text-blue-500 rounded-lg hover:bg-gray-50 transition-colors duration-200"
-                >
-                  <PencilIcon className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex items-center text-gray-500">
-                <EnvelopeIcon className="h-5 w-5 mr-2" />
-                <a href={`mailto:${member.email}`} className="text-blue-600 hover:text-blue-800">
-                  {member.email}
-                </a>
-              </div>
-              <div className="flex items-center text-gray-500">
-                <PhoneIcon className="h-5 w-5 mr-2" />
-                <a href={`tel:${member.phone}`} className="hover:text-gray-700">
-                  {displayPhone(member.phone)}
-                </a>
-              </div>
-            </div>
-          </div>
+            </CardHeader>
+            <CardContent className="space-y-2 bg-card p-4 pt-3">
+              <a
+                href={`mailto:${member.email}`}
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary"
+              >
+                <Mail className="h-3.5 w-3.5" />
+                {member.email}
+              </a>
+              <a
+                href={`tel:${member.phone}`}
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary"
+              >
+                <Phone className="h-3.5 w-3.5" />
+                {displayPhone(member.phone)}
+              </a>
+            </CardContent>
+          </Card>
         ))}
 
         {members.length === 0 && (
-          <div className="col-span-full bg-gray-50 rounded-2xl p-12 text-center">
-            <UserIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-lg font-medium text-gray-900">No members</h3>
-            <p className="mt-1 text-gray-500">Get started by adding a new member.</p>
-            <div className="mt-6">
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-              >
-                Add Member
-              </button>
-            </div>
-          </div>
+          <Card className="col-span-full border-border/5 bg-card">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Users2 className="h-12 w-12 text-primary/20" />
+              <h3 className="mt-4 text-base font-medium text-card-foreground">
+                No members yet
+              </h3>
+              <p className="mb-4 text-sm text-muted-foreground">
+                Get started by adding college staff members.
+              </p>
+              <Button onClick={() => setIsModalOpen(true)} size="sm">
+                Add First Member
+              </Button>
+            </CardContent>
+          </Card>
         )}
       </div>
 
@@ -257,7 +355,10 @@ export default function MembersPage({ params }: PageProps) {
 
       <AddEditMemberModal
         isOpen={isEditModalOpen}
-        onClose={() => { setIsEditModalOpen(false); setEditingMember(null); }}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingMember(null);
+        }}
         onSave={handleEditMember}
         prospectId={id}
         collegeName={collegeName}
@@ -266,4 +367,4 @@ export default function MembersPage({ params }: PageProps) {
       />
     </div>
   );
-} 
+}
