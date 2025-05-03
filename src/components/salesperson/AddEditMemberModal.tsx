@@ -1,227 +1,311 @@
-import { Fragment, useState, useEffect } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
-import { Member, MemberRole } from '@/types/member';
-import { formatPhoneNumber } from '@/utils/formatters';
+"use client";
+
+import { useState, useEffect } from "react";
+import { Member, MemberRole } from "@/types/member";
+import { formatPhoneNumber } from "@/utils/formatters";
+import { X, Loader2, Mail, Phone, User } from "lucide-react";
+import { toast } from "sonner";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+
 interface AddMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (member: Omit<Member, '_id' | 'createdAt' | 'updatedAt' | 'addedBy'>) => void;
+  onSave: (
+    member: Omit<Member, "_id" | "createdAt" | "updatedAt" | "addedBy">
+  ) => Promise<void>;
   prospectId: string;
   collegeName: string;
   initialData?: Partial<Member>;
-  mode?: 'add' | 'edit';
+  mode?: "add" | "edit";
 }
 
-export default function AddMemberModal({
+export default function AddEditMemberModal({
   isOpen,
   onClose,
   onSave,
   prospectId,
   collegeName,
   initialData,
-  mode = 'add',
+  mode = "add",
 }: AddMemberModalProps) {
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    phone: '',
-    email: '',
-    role: MemberRole.Other
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+    role: MemberRole.Other,
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Partial<typeof formData>>({});
 
   useEffect(() => {
     if (initialData) {
       setFormData({
-        firstName: initialData.firstName || '',
-        lastName: initialData.lastName || '',
-        phone: initialData.phone ? formatPhoneNumber(initialData.phone) : '',
-        email: initialData.email || '',
-        role: initialData.role || MemberRole.Other
+        firstName: initialData.firstName || "",
+        lastName: initialData.lastName || "",
+        phone: initialData.phone ? formatPhoneNumber(initialData.phone) : "",
+        email: initialData.email || "",
+        role: initialData.role || MemberRole.Other,
       });
     } else {
       setFormData({
-        firstName: '',
-        lastName: '',
-        phone: '',
-        email: '',
-        role: MemberRole.Other
+        firstName: "",
+        lastName: "",
+        phone: "",
+        email: "",
+        role: MemberRole.Other,
       });
     }
+    setErrors({});
   }, [initialData, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateForm = () => {
+    const newErrors: Partial<typeof formData> = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^\(\d{3}\) \d{3}-\d{4}$/;
+
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = "First name is required";
+    }
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = "Last name is required";
+    }
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!emailRegex.test(formData.email)) {
+      newErrors.email = "Invalid email format";
+    }
+    if (!formData.phone) {
+      newErrors.phone = "Phone number is required";
+    } else if (!phoneRegex.test(formData.phone)) {
+      newErrors.phone = "Invalid phone format";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Remove formatting before submitting
-    const unformattedPhone = formData.phone.replace(/\D/g, '');
-    onSave({
-      ...formData,
-      phone: unformattedPhone,
-      prospectId,
-      collegeName
-    });
+
+    if (!validateForm()) {
+      toast.error("Please fix the form errors before submitting");
+      return;
+    }
+
+    setIsLoading(true);
+    const loadingToast = toast.loading("Saving member...");
+    try {
+      const unformattedPhone = formData.phone.replace(/\D/g, "");
+      await onSave({
+        ...formData,
+        phone: unformattedPhone,
+        prospectId,
+        collegeName,
+      });
+      toast.success(
+        mode === "edit"
+          ? "Member updated successfully"
+          : "Member added successfully",
+        {
+          id: loadingToast,
+        }
+      );
+      onClose();
+    } catch (error) {
+      toast.error(
+        mode === "edit" ? "Failed to update member" : "Failed to add member",
+        {
+          id: loadingToast,
+        }
+      );
+      console.error("Error saving member:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (field: string, value: string) => {
-    if (field === 'phone') {
-      // Limit to 14 characters (including formatting)
-      if (value.replace(/\D/g, '').length <= 10) {
-        setFormData(prev => ({
+    if (field === "phone") {
+      if (value.replace(/\D/g, "").length <= 10) {
+        setFormData((prev) => ({
           ...prev,
-          [field]: formatPhoneNumber(value)
+          [field]: formatPhoneNumber(value),
         }));
       }
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        [field]: value
+        [field]: value,
       }));
+    }
+    if (errors[field as keyof typeof errors]) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   };
 
   return (
-    <Transition.Root show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={onClose}>
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
-        </Transition.Child>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold">
+            {mode === "edit" ? "Edit Member" : "Add New Member"}
+          </DialogTitle>
+          <DialogDescription>
+            {mode === "edit"
+              ? "Update the member details below."
+              : "Fill in the member details below."}
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="fixed inset-0 z-10 overflow-y-auto">
-          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-              enterTo="opacity-100 translate-y-0 sm:scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 translate-y-0 sm:scale-100"
-              leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-            >
-              <Dialog.Panel className="relative transform overflow-hidden rounded-2xl bg-white/95 px-8 pb-8 pt-5 text-left shadow-xl transition-all w-full max-w-lg">
-                <div className="absolute right-0 top-0 pr-4 pt-4">
-                  <button
-                    type="button"
-                    className="rounded-md bg-transparent text-gray-400 hover:text-gray-500"
-                    onClick={onClose}
-                  >
-                    <span className="sr-only">Close</span>
-                    <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-                  </button>
-                </div>
-
-                <Dialog.Title
-                  as="h3"
-                  className="text-2xl font-semibold leading-6 text-gray-900 mb-8"
-                >
-                  {mode === 'edit' ? 'Edit Member' : 'Add New Member'}
-                </Dialog.Title>
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1.5">
-                        First Name
-                      </label>
-                      <input
-                        type="text"
-                        id="firstName"
-                        value={formData.firstName}
-                        onChange={(e) => handleChange('firstName', e.target.value)}
-                        className="w-full px-4 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1.5">
-                        Last Name
-                      </label>
-                      <input
-                        type="text"
-                        id="lastName"
-                        value={formData.lastName}
-                        onChange={(e) => handleChange('lastName', e.target.value)}
-                        className="w-full px-4 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      value={formData.email}
-                      onChange={(e) => handleChange('email', e.target.value)}
-                      className="w-full px-4 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Phone
-                    </label>
-                    <input
-                      type="tel"
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => handleChange('phone', e.target.value)}
-                      className="w-full px-4 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Role
-                    </label>
-                    <select
-                      id="role"
-                      value={formData.role}
-                      onChange={(e) => handleChange('role', e.target.value)}
-                      className="w-full px-4 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      required
-                    >
-                      {Object.values(MemberRole).map((role) => (
-                        <option key={role} value={role}>
-                          {role}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="mt-8 flex justify-end gap-3">
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      className="px-6 py-2.5 text-base font-medium rounded-xl bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors duration-200"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-6 py-2.5 text-base font-medium rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
-                    >
-                      {mode === 'edit' ? 'Save Changes' : 'Add Member'}
-                    </button>
-                  </div>
-                </form>
-              </Dialog.Panel>
-            </Transition.Child>
+        <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="firstName"
+                  value={formData.firstName}
+                  onChange={(e) => handleChange("firstName", e.target.value)}
+                  placeholder="John"
+                  className={cn(
+                    "pl-9",
+                    errors.firstName && "border-destructive"
+                  )}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+              {errors.firstName && (
+                <p className="text-xs text-destructive">{errors.firstName}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="lastName"
+                  value={formData.lastName}
+                  onChange={(e) => handleChange("lastName", e.target.value)}
+                  placeholder="Doe"
+                  className={cn(
+                    "pl-9",
+                    errors.lastName && "border-destructive"
+                  )}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+              {errors.lastName && (
+                <p className="text-xs text-destructive">{errors.lastName}</p>
+              )}
+            </div>
           </div>
-        </div>
-      </Dialog>
-    </Transition.Root>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleChange("email", e.target.value)}
+                placeholder="john@example.com"
+                className={cn("pl-9", errors.email && "border-destructive")}
+                required
+                disabled={isLoading}
+              />
+            </div>
+            {errors.email && (
+              <p className="text-xs text-destructive">{errors.email}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone</Label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => handleChange("phone", e.target.value)}
+                placeholder="(XXX) XXX-XXXX"
+                className={cn("pl-9", errors.phone && "border-destructive")}
+                required
+                disabled={isLoading}
+              />
+            </div>
+            {errors.phone && (
+              <p className="text-xs text-destructive">{errors.phone}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="role">Role</Label>
+            <Select
+              value={formData.role}
+              onValueChange={(value) => handleChange("role", value)}
+              disabled={isLoading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a role" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(MemberRole).map((role) => (
+                  <SelectItem key={role} value={role}>
+                    {role}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={onClose}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {mode === "edit" ? "Saving..." : "Adding..."}
+                </>
+              ) : mode === "edit" ? (
+                "Save Changes"
+              ) : (
+                "Add Member"
+              )}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
-} 
+}

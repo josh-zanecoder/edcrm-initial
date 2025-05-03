@@ -1,14 +1,51 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Plus, CheckCircle2, Clock } from "lucide-react";
 
 export default function AdminDashboard() {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
+        {/* Header Skeleton */}
+        <div className="space-y-2">
+          <Skeleton className="h-8 sm:h-9 w-64" />
+          <Skeleton className="h-5 sm:h-6 w-48" />
+        </div>
+
+        {/* Activity Card Skeleton */}
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-7 sm:h-8 w-48" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6 sm:space-y-8">
+              {/* Activity Item Skeletons */}
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-start gap-3 sm:gap-4">
+                  <div className="relative">
+                    <Skeleton className="h-7 w-7 sm:h-8 sm:w-8 rounded-full" />
+                    {i !== 3 && (
+                      <div className="absolute left-[13px] sm:left-[15px] top-7 sm:top-8 h-[calc(100%+32px)] w-[2px] bg-border/20" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <Skeleton className="h-5 w-3/4" />
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-4" />
+                      <Skeleton className="h-4 w-16" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -18,147 +55,94 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6 px-5">
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900">
-          Sales Team Management
-        </h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Sales Team Management
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            Monitor and manage your sales team
+          </p>
+        </div>
       </div>
 
       {/* Sales Team Activity */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:px-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg sm:text-xl">
             Recent Sales Team Activity
-          </h3>
-        </div>
-        <div className="border-t border-gray-200">
-          <div className="px-4 py-5 sm:p-6">
-            <div className="flow-root">
-              <ul className="-mb-8">
-                <li>
-                  <div className="relative pb-8">
-                    <span
-                      className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
-                      aria-hidden="true"
-                    ></span>
-                    <div className="relative flex space-x-3">
-                      <div>
-                        <span className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center ring-8 ring-white">
-                          <svg
-                            className="h-5 w-5 text-white"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                            />
-                          </svg>
-                        </span>
-                      </div>
-                      <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                        <div>
-                          <p className="text-sm text-gray-500">
-                            New salesperson{" "}
-                            <span className="font-medium text-gray-900">
-                              John Doe
-                            </span>{" "}
-                            was added to the team
-                          </p>
-                        </div>
-                        <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                          <time dateTime="2024-04-27">1h ago</time>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-                <li>
-                  <div className="relative pb-8">
-                    <span
-                      className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
-                      aria-hidden="true"
-                    ></span>
-                    <div className="relative flex space-x-3">
-                      <div>
-                        <span className="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center ring-8 ring-white">
-                          <svg
-                            className="h-5 w-5 text-white"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                        </span>
-                      </div>
-                      <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                        <div>
-                          <p className="text-sm text-gray-500">
-                            Sales target achieved by{" "}
-                            <span className="font-medium text-gray-900">
-                              Jane Smith
-                            </span>
-                          </p>
-                        </div>
-                        <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                          <time dateTime="2024-04-26">2h ago</time>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-                <li>
-                  <div className="relative pb-8">
-                    <div className="relative flex space-x-3">
-                      <div>
-                        <span className="h-8 w-8 rounded-full bg-yellow-500 flex items-center justify-center ring-8 ring-white">
-                          <svg
-                            className="h-5 w-5 text-white"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                        </span>
-                      </div>
-                      <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                        <div>
-                          <p className="text-sm text-gray-500">
-                            Monthly review completed for{" "}
-                            <span className="font-medium text-gray-900">
-                              Mike Johnson
-                            </span>
-                          </p>
-                        </div>
-                        <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                          <time dateTime="2024-04-25">1d ago</time>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              </ul>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6 sm:space-y-8">
+            {/* Activity Item 1 */}
+            <div className="relative flex items-start gap-3 sm:gap-4">
+              <div className="relative">
+                <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-primary flex items-center justify-center">
+                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary-foreground" />
+                </div>
+                <div className="absolute left-[13px] sm:left-[15px] top-7 sm:top-8 h-[calc(100%+32px)] w-[2px] bg-border" />
+              </div>
+              <div className="flex-1 min-w-0 space-y-1">
+                <p className="text-sm text-muted-foreground break-words">
+                  New salesperson{" "}
+                  <span className="font-medium text-foreground">John Doe</span>{" "}
+                  was added to the team
+                </p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <time dateTime="2024-04-27">1h ago</time>
+                </div>
+              </div>
+            </div>
+
+            {/* Activity Item 2 */}
+            <div className="relative flex items-start gap-3 sm:gap-4">
+              <div className="relative">
+                <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-emerald-500 flex items-center justify-center">
+                  <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-50" />
+                </div>
+                <div className="absolute left-[13px] sm:left-[15px] top-7 sm:top-8 h-[calc(100%+32px)] w-[2px] bg-border" />
+              </div>
+              <div className="flex-1 min-w-0 space-y-1">
+                <p className="text-sm text-muted-foreground break-words">
+                  Sales target achieved by{" "}
+                  <span className="font-medium text-foreground">
+                    Jane Smith
+                  </span>
+                </p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <time dateTime="2024-04-26">2h ago</time>
+                </div>
+              </div>
+            </div>
+
+            {/* Activity Item 3 */}
+            <div className="relative flex items-start gap-3 sm:gap-4">
+              <div className="relative">
+                <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-amber-500 flex items-center justify-center">
+                  <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-50" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0 space-y-1">
+                <p className="text-sm text-muted-foreground break-words">
+                  Monthly review completed for{" "}
+                  <span className="font-medium text-foreground">
+                    Mike Johnson
+                  </span>
+                </p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <time dateTime="2024-04-25">1d ago</time>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

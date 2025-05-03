@@ -1,69 +1,92 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import React, { Suspense } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 
-function classNames(...classes: string[]) {
-  return classes.filter(Boolean).join(' ');
-}
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface LayoutProps {
   children: React.ReactElement;
   params: Promise<{ id: string }>;
 }
 
-export default function ProspectLayout({ 
-  children,
-  params
-}: LayoutProps) {
+function LoadingState() {
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex items-center space-x-3 sm:space-x-4">
+        <Skeleton className="h-10 w-10 sm:h-12 sm:w-12" />
+        <div className="space-y-1.5 sm:space-y-2">
+          <Skeleton className="h-3.5 sm:h-4 w-[200px] sm:w-[250px]" />
+          <Skeleton className="h-3.5 sm:h-4 w-[150px] sm:w-[200px]" />
+        </div>
+      </div>
+      <div className="space-y-2 sm:space-y-3">
+        <Skeleton className="h-[150px] sm:h-[200px] w-full" />
+        <Skeleton className="h-[150px] sm:h-[200px] w-full" />
+      </div>
+    </div>
+  );
+}
+
+export default function ProspectLayout({ children, params }: LayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const resolvedParams = React.use(params);
   const id = resolvedParams.id;
 
   const tabs = [
-    { name: 'Details', href: `/salesperson/prospects/${id}/details` },
-    { name: 'Members', href: `/salesperson/prospects/${id}/members` },
-    { name: 'Reminders', href: `/salesperson/prospects/${id}/reminders` },
-    { name: 'Activities', href: `/salesperson/prospects/${id}/activities` },
+    { name: "Details", href: `/salesperson/prospects/${id}/details` },
+    { name: "Members", href: `/salesperson/prospects/${id}/members` },
+    { name: "Reminders", href: `/salesperson/prospects/${id}/reminders` },
+    { name: "Activities", href: `/salesperson/prospects/${id}/activities` },
   ];
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-end mb-8">
-          <Link
-            href="/salesperson/prospects"
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-          >
-            Back to Prospects
-          </Link>
-        </div>
+  const handleTabChange = (value: string) => {
+    router.push(value);
+  };
 
-        <div className="bg-white shadow rounded-lg">
-          <div className="border-b border-gray-200">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-8">
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto w-full px-3 sm:px-6 py-3 sm:py-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mb-4 sm:mb-6 -ml-1 sm:-ml-2 gap-1 sm:gap-2 text-muted-foreground hover:text-foreground h-9 sm:h-10"
+          asChild
+        >
+          <Link href="/salesperson/prospects">
+            <ArrowLeft className="h-4 w-4" />
+            <span className="text-sm sm:text-base">Back to Prospects</span>
+          </Link>
+        </Button>
+
+        <Tabs
+          value={pathname}
+          className="w-full space-y-4 sm:space-y-6"
+          onValueChange={handleTabChange}
+        >
+          <div className="sm:border-b sm:border-border">
+            <TabsList className="grid grid-cols-2 sm:flex sm:flex-row gap-1 sm:gap-0 rounded-none bg-transparent p-0 h-auto sm:h-[42px] w-full justify-between">
               {tabs.map((tab) => (
-                <Link
+                <TabsTrigger
                   key={tab.name}
-                  href={tab.href}
-                  className={classNames(
-                    'py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap',
-                    pathname === tab.href
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  )}
+                  value={tab.href}
+                  className="relative h-[38px] sm:h-[42px] rounded-md sm:rounded-none border sm:border-0 border-border sm:border-b-2 border-transparent data-[state=active]:border-primary bg-transparent px-2 sm:px-4 text-sm sm:text-base font-medium data-[state=active]:bg-primary/5 sm:data-[state=active]:bg-transparent data-[state=active]:border-primary sm:data-[state=active]:border-primary data-[state=active]:shadow-none sm:flex-1 text-center"
                 >
                   {tab.name}
-                </Link>
+                </TabsTrigger>
               ))}
-            </div>
+            </TabsList>
           </div>
-          <div className="p-6">
-            {children}
+          <div className="rounded-lg">
+            <Suspense fallback={<LoadingState />}>{children}</Suspense>
           </div>
-        </div>
+        </Tabs>
       </div>
     </div>
   );
-} 
+}

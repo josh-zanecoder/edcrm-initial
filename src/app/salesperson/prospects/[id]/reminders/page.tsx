@@ -1,35 +1,52 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Reminder, ReminderStatus } from '@/types/reminder';
-import AddEditReminderModal from '@/components/salesperson/AddEditReminderModal';
-import { 
-  BellIcon, 
-  ClockIcon, 
-  CheckCircleIcon,
-  TrashIcon,
-  PencilIcon,
-  ExclamationCircleIcon
-} from '@heroicons/react/24/outline';
-import { toast } from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import { Reminder, ReminderStatus } from "@/types/reminder";
+import AddEditReminderModal from "@/components/salesperson/AddEditReminderModal";
+import {
+  Bell,
+  Clock,
+  CheckCircle2,
+  Trash2,
+  Pencil,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 function formatDate(date: Date | string) {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return dateObj.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
+  const dateObj = typeof date === "string" ? new Date(date) : date;
+  return dateObj.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   });
 }
 
-function getStatusColor(status: ReminderStatus) {
+function getStatusVariant(status: ReminderStatus) {
   switch (status) {
     case ReminderStatus.SENT:
-      return 'bg-green-50 text-green-700';
+      return "default";
     case ReminderStatus.CANCELLED:
-      return 'bg-red-50 text-red-700';
+      return "destructive";
     default:
-      return 'bg-yellow-50 text-yellow-700';
+      return "secondary";
   }
 }
 
@@ -46,22 +63,24 @@ export default function RemindersPage({ params }: PageProps) {
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
+  const [deleteReminderId, setDeleteReminderId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchReminders = React.useCallback(async () => {
     try {
       setError(null);
       setIsLoading(true);
-      
+
       const response = await fetch(`/api/prospects/${id}/reminders`);
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch reminders');
+        throw new Error(errorData.error || "Failed to fetch reminders");
       }
       const remindersData = await response.json();
       setReminders(remindersData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      toast.error('Failed to load reminders');
+      setError(err instanceof Error ? err.message : "An error occurred");
+      toast.error("Failed to load reminders");
     } finally {
       setIsLoading(false);
     }
@@ -73,46 +92,70 @@ export default function RemindersPage({ params }: PageProps) {
     }
   }, [id, fetchReminders]);
 
-  const handleAddReminder = async (reminder: Omit<Reminder, '_id' | 'createdAt' | 'updatedAt' | 'addedBy'>) => {
+  const handleAddReminder = async (
+    reminder: Omit<Reminder, "_id" | "createdAt" | "updatedAt" | "addedBy">
+  ) => {
     try {
       const response = await fetch(`/api/prospects/${id}/reminders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...reminder,
-          dueDate: reminder.dueDate.toISOString()
+          dueDate: reminder.dueDate.toISOString(),
         }),
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add reminder');
+        throw new Error(errorData.error || "Failed to add reminder");
       }
       setIsModalOpen(false);
-      toast.success('Reminder added successfully');
       await fetchReminders();
     } catch (err) {
-      console.error('Error adding reminder:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to add reminder');
+      console.error("Error adding reminder:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Failed to add reminder"
+      );
     }
   };
 
-  const handleDeleteReminder = async (reminderId: string) => {
+  const handleDeleteClick = (reminderId: string) => {
+    setDeleteReminderId(reminderId);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteReminderId) return;
+
+    setIsDeleting(true);
+    const loadingToast = toast.loading("Deleting reminder...");
+
     try {
-      const response = await fetch(`/api/prospects/${id}/reminders/${reminderId}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(
+        `/api/prospects/${id}/reminders/${deleteReminderId}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete reminder');
+        throw new Error(errorData.error || "Failed to delete reminder");
       }
 
-      setReminders(prevReminders => prevReminders.filter(reminder => reminder._id !== reminderId));
-      toast.success('Reminder removed successfully');
+      setReminders((prevReminders) =>
+        prevReminders.filter((reminder) => reminder._id !== deleteReminderId)
+      );
+      toast.success("Reminder removed successfully", {
+        id: loadingToast,
+      });
     } catch (err) {
-      console.error('Error deleting reminder:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to delete reminder');
+      console.error("Error deleting reminder:", err);
+      toast.error("Failed to delete reminder", {
+        id: loadingToast,
+      });
       fetchReminders();
+    } finally {
+      setIsDeleting(false);
+      setDeleteReminderId(null);
     }
   };
 
@@ -121,134 +164,197 @@ export default function RemindersPage({ params }: PageProps) {
     setIsEditModalOpen(true);
   };
 
-  const handleEditReminder = async (reminder: Omit<Reminder, '_id' | 'createdAt' | 'updatedAt' | 'addedBy'>) => {
+  const handleEditReminder = async (
+    reminder: Omit<Reminder, "_id" | "createdAt" | "updatedAt" | "addedBy">
+  ) => {
     if (!editingReminder) return;
     try {
-      const response = await fetch(`/api/prospects/${id}/reminders/${editingReminder._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...reminder,
-          dueDate: reminder.dueDate.toISOString()
-        }),
-      });
+      const response = await fetch(
+        `/api/prospects/${id}/reminders/${editingReminder._id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...reminder,
+            dueDate: reminder.dueDate.toISOString(),
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update reminder');
+        throw new Error(errorData.error || "Failed to update reminder");
       }
 
       setIsEditModalOpen(false);
       setEditingReminder(null);
-      toast.success('Reminder updated successfully');
       await fetchReminders();
     } catch (err) {
-      console.error('Error updating reminder:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to update reminder');
+      console.error("Error updating reminder:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update reminder"
+      );
     }
   };
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-6 space-y-4 sm:space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 sm:h-5 w-4 sm:w-5" />
+            <Skeleton className="h-5 sm:h-6 w-28 sm:w-32" />
+          </div>
+          <Skeleton className="h-8 sm:h-9 w-20 sm:w-24" />
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card
+              key={i}
+              className="overflow-hidden border-border/5 bg-card shadow-none"
+            >
+              <CardHeader className="border-b border-border/5 bg-card p-2.5 sm:p-4">
+                <div className="flex items-start justify-between">
+                  <div className="min-w-0 flex-1 pr-2">
+                    <Skeleton className="h-4 sm:h-5 w-28 sm:w-32 mb-1.5 sm:mb-2" />
+                    <Skeleton className="h-4 sm:h-5 w-16 sm:w-20" />
+                  </div>
+                  <div className="flex gap-1 sm:gap-2 flex-shrink-0">
+                    <Skeleton className="h-7 w-7 sm:h-8 sm:w-8" />
+                    <Skeleton className="h-7 w-7 sm:h-8 sm:w-8" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2 bg-card p-2.5 sm:p-4 pt-2 sm:pt-3">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <Skeleton className="h-3.5 w-20 sm:h-4 sm:w-24" />
+                </div>
+                <Skeleton className="h-3.5 sm:h-4 w-full mt-1.5 sm:mt-2" />
+                <Skeleton className="h-3.5 sm:h-4 w-3/4" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-center px-4">
-        <ExclamationCircleIcon className="h-12 w-12 text-red-500 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Reminders</h3>
-        <p className="text-gray-500 mb-4">{error}</p>
-        <button
+      <Alert variant="destructive" className="mx-auto max-w-2xl m-3 sm:m-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error Loading Reminders</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+        <Button
+          variant="outline"
+          size="sm"
           onClick={fetchReminders}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+          className="mt-2"
         >
           Try Again
-        </button>
-      </div>
+        </Button>
+      </Alert>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-2xl p-6 mb-6">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <BellIcon className="h-7 w-7 text-blue-600" />
-            <h1 className="text-2xl font-semibold text-gray-900">Reminders</h1>
-          </div>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="px-6 py-2.5 text-base font-medium rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
-          >
-            Add Reminder
-          </button>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4 sm:space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Bell className="h-4 sm:h-5 w-4 sm:w-5 text-primary" />
+          <h1 className="text-base sm:text-lg font-medium">Reminders</h1>
         </div>
+        <Button
+          onClick={() => setIsModalOpen(true)}
+          size="sm"
+          className="h-8 sm:h-9"
+        >
+          Add Reminder
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
         {reminders.map((reminder) => (
-          <div key={reminder._id} className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900">
-                  {reminder.title}
-                </h3>
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(reminder.status)} mt-2`}>
+          <Card
+            key={reminder._id}
+            className="overflow-hidden border-border/5 bg-card shadow-none"
+          >
+            <CardHeader className="border-b border-border/5 bg-card p-3">
+              <div className="relative flex flex-col w-full">
+                <div className="flex items-start justify-between w-full">
+                  <h3 className="text-sm font-medium text-card-foreground break-all pr-16">
+                    {reminder.title}
+                  </h3>
+                  <div className="flex items-start gap-1 absolute right-0 top-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => handleDeleteClick(reminder._id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary"
+                      onClick={() => handleEditClick(reminder)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+                <Badge
+                  variant={getStatusVariant(reminder.status)}
+                  className="mt-1.5 w-fit text-[10px] font-normal"
+                >
                   {reminder.status}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2 bg-card p-3">
+              <div className="flex items-center gap-2">
+                <Clock className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground truncate">
+                  Due: {formatDate(reminder.dueDate)}
                 </span>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleDeleteReminder(reminder._id)}
-                  className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-50 transition-colors duration-200"
-                >
-                  <TrashIcon className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => handleEditClick(reminder)}
-                  className="p-2 text-gray-400 hover:text-blue-500 rounded-lg hover:bg-gray-50 transition-colors duration-200"
-                >
-                  <PencilIcon className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex items-center text-gray-500">
-                <ClockIcon className="h-5 w-5 mr-2" />
-                <span>Due: {formatDate(reminder.dueDate)}</span>
-              </div>
               {reminder.completedAt && (
-                <div className="flex items-center text-gray-500">
-                  <CheckCircleIcon className="h-5 w-5 mr-2 text-green-500" />
-                  <span>Completed: {formatDate(reminder.completedAt)}</span>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0 text-green-500" />
+                  <span className="text-xs text-muted-foreground truncate">
+                    Completed: {formatDate(reminder.completedAt)}
+                  </span>
                 </div>
               )}
-              <p className="text-gray-600 mt-2">
+              <p className="text-xs text-muted-foreground break-words leading-relaxed">
                 {reminder.description}
               </p>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         ))}
 
         {reminders.length === 0 && (
-          <div className="col-span-full bg-gray-50 rounded-2xl p-12 text-center">
-            <BellIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-lg font-medium text-gray-900">No reminders</h3>
-            <p className="mt-1 text-gray-500">Get started by adding a new reminder.</p>
-            <div className="mt-6">
-              <button
+          <Card className="col-span-full border-border/5 bg-card">
+            <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12">
+              <Bell className="h-10 w-10 sm:h-12 sm:w-12 text-primary/20" />
+              <h3 className="mt-3 sm:mt-4 text-sm sm:text-base font-medium text-card-foreground">
+                No reminders yet
+              </h3>
+              <p className="mb-3 sm:mb-4 text-xs sm:text-sm text-center text-muted-foreground max-w-[240px]">
+                Get started by adding a new reminder.
+              </p>
+              <Button
                 onClick={() => setIsModalOpen(true)}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+                size="sm"
+                className="h-8 sm:h-9"
               >
-                Add Reminder
-              </button>
-            </div>
-          </div>
+                Add First Reminder
+              </Button>
+            </CardContent>
+          </Card>
         )}
       </div>
 
@@ -261,12 +367,47 @@ export default function RemindersPage({ params }: PageProps) {
 
       <AddEditReminderModal
         isOpen={isEditModalOpen}
-        onClose={() => { setIsEditModalOpen(false); setEditingReminder(null); }}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingReminder(null);
+        }}
         onSave={handleEditReminder}
         prospectId={id}
         initialData={editingReminder || undefined}
         mode="edit"
       />
+
+      <AlertDialog
+        open={!!deleteReminderId}
+        onOpenChange={() => setDeleteReminderId(null)}
+      >
+        <AlertDialogContent className="sm:max-w-[425px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              reminder.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
-} 
+}

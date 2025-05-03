@@ -48,8 +48,11 @@ export function NavUser({
   const handleLogout = async () => {
     try {
       setIsLoading(true);
+      const loadingToast = toast.loading("Logging out...");
       await logout();
-      toast.success("Logged out successfully");
+      toast.success("Logged out successfully", {
+        id: loadingToast,
+      });
       router.push("/login");
     } catch (error) {
       console.error("Logout error:", error);

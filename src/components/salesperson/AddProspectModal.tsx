@@ -1,96 +1,154 @@
-'use client';
+"use client";
 
-import { Dialog, Transition } from '@headlessui/react';
-import { Fragment, useState, useEffect } from 'react';
-import { Prospect, CollegeType } from '@/types/prospect';
-import toast from 'react-hot-toast';
-import { formatPhoneNumber } from '@/utils/formatters';
+import { Fragment } from "react";
+import { Dialog, Transition } from "@headlessui/react";
+import { useState, useEffect } from "react";
+import { Prospect, CollegeType } from "@/types/prospect";
+import { formatPhoneNumber } from "@/utils/formatters";
+import { X, Check, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+
+import {
+  Dialog as ShadDialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface AddProspectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (prospect: Omit<Prospect, 'id' | 'createdAt' | 'updatedAt' | 'addedBy' | 'assignedTo'>) => void;
+  onSave: (
+    prospect: Omit<
+      Prospect,
+      "id" | "createdAt" | "updatedAt" | "addedBy" | "assignedTo"
+    >
+  ) => void;
 }
 
 const initialFormState = {
-  collegeName: '',
-  phone: '',
-  email: '',
+  collegeName: "",
+  phone: "",
+  email: "",
   address: {
-    city: '',
-    state: '',
-    zip: ''
+    city: "",
+    state: "",
+    zip: "",
   },
-  county: '',
-  website: '',
+  county: "",
+  website: "",
   collegeTypes: [] as CollegeType[],
   bppeApproved: false,
-  status: 'New' as const,
-  lastContact: new Date().toISOString().split('T')[0]
+  status: "New" as const,
+  lastContact: new Date().toISOString().split("T")[0],
 };
 
-export default function AddProspectModal({ isOpen, onClose, onSave }: AddProspectModalProps) {
+export default function AddProspectModal({
+  isOpen,
+  onClose,
+  onSave,
+}: AddProspectModalProps) {
   const [formData, setFormData] = useState(initialFormState);
   const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isValidPhoneNumber = (phone: string): boolean => {
     const phoneRegex = /^\(\d{3}\) \d{3}-\d{4}$/;
     return phoneRegex.test(phone);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    setIsSubmitting(true);
+    const loadingToast = toast.loading("Saving prospect...");
+
     // Validate phone number before submitting
     if (!isValidPhoneNumber(formData.phone)) {
-      toast.error('Please enter a valid phone number in format (XXX) XXX-XXXX');
+      toast.error(
+        "Please enter a valid phone number in format (XXX) XXX-XXXX",
+        {
+          id: loadingToast,
+        }
+      );
       return;
     }
-    
-    onSave(formData);
-    // Reset form to initial state
-    setFormData(initialFormState);
-    // Close modal
-    onClose();
+
+    try {
+      await onSave(formData);
+      // Reset form to initial state
+      setFormData(initialFormState);
+      // Close modal
+      onClose();
+      toast.success("Prospect added successfully", {
+        id: loadingToast,
+      });
+    } catch (error) {
+      toast.error("Failed to add prospect. Please try again.", {
+        id: loadingToast,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value, type } = e.target;
-    
-    if (name === 'phone') {
+
+    if (name === "phone") {
       const formattedPhone = formatPhoneNumber(value);
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        [name]: formattedPhone
+        [name]: formattedPhone,
       }));
       return;
     }
-    
-    if (name.startsWith('address.')) {
-      const field = name.split('.')[1];
-      setFormData(prev => ({
+
+    if (name.startsWith("address.")) {
+      const field = name.split(".")[1];
+      setFormData((prev) => ({
         ...prev,
         address: {
           ...prev.address,
-          [field]: value
-        }
+          [field]: value,
+        },
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+        [name]:
+          type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
       }));
     }
   };
 
   const handleTypeToggle = (type: CollegeType) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       collegeTypes: prev.collegeTypes.includes(type)
-        ? prev.collegeTypes.filter(t => t !== type)
-        : [...prev.collegeTypes, type]
+        ? prev.collegeTypes.filter((t) => t !== type)
+        : [...prev.collegeTypes, type],
     }));
   };
 
@@ -103,298 +161,226 @@ export default function AddProspectModal({ isOpen, onClose, onSave }: AddProspec
   }, [isOpen]);
 
   return (
-    <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-10" onClose={onClose}>
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-md" />
-        </Transition.Child>
+    <ShadDialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Add New Prospect</DialogTitle>
+          <DialogDescription>
+            Fill in the details below to add a new prospect to your list.
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4 text-center">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 scale-95"
-              enterTo="opacity-100 scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-95"
-            >
-              <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-gradient-to-b from-white to-gray-50 p-8 text-left align-middle shadow-2xl transition-all">
-                <div className="absolute top-0 right-0 pt-4 pr-4">
-                  <button
-                    type="button"
-                    className="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none transition-colors duration-200"
-                    onClick={onClose}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="collegeName">College Name</Label>
+              <Input
+                id="collegeName"
+                name="collegeName"
+                value={formData.collegeName}
+                onChange={handleChange}
+                placeholder="Enter college name"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>College Types</Label>
+              <Popover
+                open={isTypeDropdownOpen}
+                onOpenChange={setIsTypeDropdownOpen}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={isTypeDropdownOpen}
+                    className="w-full justify-between"
                   >
-                    <span className="sr-only">Close</span>
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="text-center mb-8">
-                  <Dialog.Title
-                    as="h3"
-                    className="text-2xl font-bold text-gray-900"
-                  >
-                    Add New Prospect
-                  </Dialog.Title>
-                  <p className="mt-2 text-sm text-gray-500">
-                    Fill in the details below to add a new prospect to your list.
-                  </p>
-                </div>
-
-                <form onSubmit={handleSubmit} className="mt-6 space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label htmlFor="collegeName" className="block text-sm font-medium text-gray-700">
-                        College Name
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          name="collegeName"
-                          id="collegeName"
-                          required
-                          className="block w-full rounded-xl border-0 py-3 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all duration-200"
-                          value={formData.collegeName}
-                          onChange={handleChange}
-                          placeholder="Enter college name"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label htmlFor="collegeTypes" className="block text-sm font-medium text-gray-700">
-                        College Types
-                      </label>
-                      <div className="relative">
-                        <button
-                          type="button"
-                          className="block w-full rounded-xl border-0 py-3 px-4 text-left text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all duration-200"
-                          onClick={() => setIsTypeDropdownOpen(!isTypeDropdownOpen)}
+                    <span className="truncate">
+                      {formData.collegeTypes.length > 0
+                        ? formData.collegeTypes.join(", ")
+                        : "Select college types..."}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search college types..." />
+                    <CommandEmpty>No college type found.</CommandEmpty>
+                    <CommandGroup>
+                      {Object.values(CollegeType).map((type) => (
+                        <CommandItem
+                          key={type}
+                          onSelect={() => handleTypeToggle(type)}
+                          className="flex items-center gap-2"
                         >
-                          {formData.collegeTypes.length > 0 
-                            ? formData.collegeTypes.join(', ')
-                            : 'Select college types...'}
-                          <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                            <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </span>
-                        </button>
-                        
-                        {isTypeDropdownOpen && (
-                          <div className="absolute z-10 mt-1 w-full bg-white rounded-xl shadow-lg max-h-60 overflow-auto ring-1 ring-black ring-opacity-5">
-                            <div className="p-2 space-y-1">
-                              {Object.values(CollegeType).map((type) => (
-                                <div
-                                  key={type}
-                                  className="relative flex items-center px-2 py-2 hover:bg-gray-50 rounded-lg cursor-pointer"
-                                  onClick={() => handleTypeToggle(type)}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                    checked={formData.collegeTypes.includes(type)}
-                                    onChange={() => {}}
-                                  />
-                                  <label className="ml-3 block text-sm font-medium text-gray-700">
-                                    {type}
-                                  </label>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <p className="mt-1 text-sm text-gray-500">
-                        Select all that apply
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                        Phone
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="tel"
-                          name="phone"
-                          id="phone"
-                          required
-                          maxLength={14}
-                          className={`block w-full rounded-xl border-0 py-3 px-4 text-gray-900 shadow-sm ring-1 ring-inset ${
-                            formData.phone && !isValidPhoneNumber(formData.phone)
-                              ? 'ring-red-300 focus:ring-red-500'
-                              : 'ring-gray-300 focus:ring-blue-600'
-                          } placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6 transition-all duration-200`}
-                          value={formData.phone}
-                          onChange={handleChange}
-                          placeholder="(555) 123-4567"
-                        />
-                        {formData.phone && !isValidPhoneNumber(formData.phone) && (
-                          <p className="mt-1 text-xs text-red-500">
-                            Please enter a valid phone number in format (XXX) XXX-XXXX
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                        Email
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="email"
-                          name="email"
-                          id="email"
-                          required
-                          className="block w-full rounded-xl border-0 py-3 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all duration-200"
-                          value={formData.email}
-                          onChange={handleChange}
-                          placeholder="example@college.edu"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label htmlFor="address.city" className="block text-sm font-medium text-gray-700">
-                        City
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          name="address.city"
-                          id="address.city"
-                          required
-                          className="block w-full rounded-xl border-0 py-3 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all duration-200"
-                          value={formData.address.city}
-                          onChange={handleChange}
-                          placeholder="Enter city"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label htmlFor="address.state" className="block text-sm font-medium text-gray-700">
-                        State
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          name="address.state"
-                          id="address.state"
-                          required
-                          className="block w-full rounded-xl border-0 py-3 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all duration-200"
-                          value={formData.address.state}
-                          onChange={handleChange}
-                          placeholder="Enter state"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label htmlFor="address.zip" className="block text-sm font-medium text-gray-700">
-                        ZIP Code
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          name="address.zip"
-                          id="address.zip"
-                          required
-                          className="block w-full rounded-xl border-0 py-3 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all duration-200"
-                          value={formData.address.zip}
-                          onChange={handleChange}
-                          placeholder="Enter ZIP code"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label htmlFor="county" className="block text-sm font-medium text-gray-700">
-                        County
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          name="county"
-                          id="county"
-                          required
-                          className="block w-full rounded-xl border-0 py-3 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all duration-200"
-                          value={formData.county}
-                          onChange={handleChange}
-                          placeholder="Enter county"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label htmlFor="website" className="block text-sm font-medium text-gray-700">
-                        Website
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="url"
-                          name="website"
-                          id="website"
-                          required
-                          className="block w-full rounded-xl border-0 py-3 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all duration-200"
-                          value={formData.website}
-                          onChange={handleChange}
-                          placeholder="https://example.com"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="checkbox"
-                        name="bppeApproved"
-                        id="bppeApproved"
-                        className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-600 transition-colors duration-200"
-                        checked={formData.bppeApproved}
-                        onChange={handleChange}
-                      />
-                      <label htmlFor="bppeApproved" className="text-sm text-gray-700">
-                        BPPE Approved
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="mt-8 flex justify-end space-x-3">
-                    <button
-                      type="button"
-                      className="inline-flex justify-center rounded-xl border border-gray-300 bg-white px-6 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200"
-                      onClick={onClose}
+                          <Checkbox
+                            checked={formData.collegeTypes.includes(type)}
+                            className="h-4 w-4"
+                          />
+                          {type}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {formData.collegeTypes.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {formData.collegeTypes.map((type) => (
+                    <Badge
+                      key={type}
+                      variant="secondary"
+                      className="cursor-pointer"
+                      onClick={() => handleTypeToggle(type)}
                     >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="inline-flex justify-center rounded-xl border border-transparent bg-blue-600 px-6 py-3 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200"
-                    >
-                      Save Prospect
-                    </button>
-                  </div>
-                </form>
-              </Dialog.Panel>
-            </Transition.Child>
+                      {type}
+                      <X className="ml-1 h-3 w-3" />
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                name="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="(555) 123-4567"
+                maxLength={14}
+                required
+                className={cn(
+                  formData.phone &&
+                    !isValidPhoneNumber(formData.phone) &&
+                    "border-destructive"
+                )}
+              />
+              {formData.phone && !isValidPhoneNumber(formData.phone) && (
+                <p className="text-xs text-destructive">
+                  Please enter a valid phone number in format (XXX) XXX-XXXX
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="example@college.edu"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="address.city">City</Label>
+              <Input
+                id="address.city"
+                name="address.city"
+                value={formData.address.city}
+                onChange={handleChange}
+                placeholder="Enter city"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="address.state">State</Label>
+              <Input
+                id="address.state"
+                name="address.state"
+                value={formData.address.state}
+                onChange={handleChange}
+                placeholder="Enter state"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="address.zip">ZIP Code</Label>
+              <Input
+                id="address.zip"
+                name="address.zip"
+                value={formData.address.zip}
+                onChange={handleChange}
+                placeholder="Enter ZIP code"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="county">County</Label>
+              <Input
+                id="county"
+                name="county"
+                value={formData.county}
+                onChange={handleChange}
+                placeholder="Enter county"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="website">Website</Label>
+              <Input
+                id="website"
+                name="website"
+                type="url"
+                value={formData.website}
+                onChange={handleChange}
+                placeholder="https://example.com"
+                required
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="bppeApproved"
+                name="bppeApproved"
+                checked={formData.bppeApproved}
+                onCheckedChange={(checked) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    bppeApproved: checked as boolean,
+                  }))
+                }
+              />
+              <Label htmlFor="bppeApproved" className="text-sm font-normal">
+                BPPE Approved
+              </Label>
+            </div>
           </div>
-        </div>
-      </Dialog>
-    </Transition>
+
+          <div className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              type="button"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Prospect"
+              )}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </ShadDialog>
   );
 }
