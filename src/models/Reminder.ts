@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import { ReminderType, ReminderStatus } from '@/types/reminder';
-import mongoose from 'mongoose';
 
 const reminderSchema = new mongoose.Schema({
   prospectId: {
