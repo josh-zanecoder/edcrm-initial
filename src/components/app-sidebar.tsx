@@ -32,7 +32,7 @@ const salesPersonNavItems = [
 const adminNavItems = [
   {
     title: "Dashboard",
-    url: "/admin",
+    url: "/admin/dashboard",
     icon: LayoutDashboard,
   },
   {

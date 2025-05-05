@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { CreateSalespersonInput } from "@/types/salesperson";
+import { useState, useEffect } from "react";
+import { Salesperson, UpdateSalespersonInput } from "@/types/salesperson";
 import { formatPhoneNumber, unformatPhoneNumber } from "@/utils/formatters";
 import { toast } from "sonner";
 import {
@@ -17,30 +17,51 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-interface AddSalespersonModalProps {
+interface EditSalespersonModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateSalespersonInput) => Promise<void>;
+  onSubmit: (id: string, data: UpdateSalespersonInput) => Promise<void>;
+  salesperson: Salesperson;
 }
 
-export default function AddSalespersonModal({
+export default function EditSalespersonModal({
   isOpen,
   onClose,
   onSubmit,
-}: AddSalespersonModalProps) {
-  const [formData, setFormData] = useState<CreateSalespersonInput>({
+  salesperson,
+}: EditSalespersonModalProps) {
+  const [formData, setFormData] = useState<UpdateSalespersonInput>({
     first_name: "",
     last_name: "",
     email: "",
     phone: "",
-    password: "Default@123",
-    role: "salesperson",
+    status: "active" as const,
     twilio_number: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Partial<CreateSalespersonInput>>({});
+  const [errors, setErrors] = useState<Partial<UpdateSalespersonInput>>({});
   const [apiError, setApiError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (salesperson) {
+      setFormData({
+        first_name: salesperson.first_name,
+        last_name: salesperson.last_name,
+        email: salesperson.email,
+        phone: salesperson.phone,
+        status: salesperson.status,
+        twilio_number: "",
+      });
+    }
+  }, [salesperson]);
 
   const handlePhoneChange = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -59,11 +80,18 @@ export default function AddSalespersonModal({
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e:
+      | React.ChangeEvent<HTMLInputElement>
+      | { target: { name: string; value: string } }
+  ) => {
     const { name, value } = e.target;
 
     if (name === "phone" || name === "twilio_number") {
-      handlePhoneChange(e, name as "phone" | "twilio_number");
+      handlePhoneChange(
+        e as React.ChangeEvent<HTMLInputElement>,
+        name as "phone" | "twilio_number"
+      );
       return;
     }
 
@@ -72,7 +100,7 @@ export default function AddSalespersonModal({
       [name]: value,
     }));
 
-    if (errors[name as keyof CreateSalespersonInput]) {
+    if (errors[name as keyof UpdateSalespersonInput]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
     if (apiError) {
@@ -81,29 +109,33 @@ export default function AddSalespersonModal({
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<CreateSalespersonInput> = {};
+    const newErrors: Partial<UpdateSalespersonInput> = {};
 
-    if (!formData.first_name.trim()) {
+    if (formData.first_name !== undefined && !formData.first_name.trim()) {
       newErrors.first_name = "First name is required";
     }
 
-    if (!formData.last_name.trim()) {
+    if (formData.last_name !== undefined && !formData.last_name.trim()) {
       newErrors.last_name = "Last name is required";
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Invalid email format";
+    if (formData.email !== undefined) {
+      if (!formData.email.trim()) {
+        newErrors.email = "Email is required";
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        newErrors.email = "Invalid email format";
+      }
     }
 
     const phoneRegex =
       /^\+?1?\s*\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})$/;
 
-    if (!formData.phone.trim()) {
-      newErrors.phone = "Phone is required";
-    } else if (!phoneRegex.test(unformatPhoneNumber(formData.phone))) {
-      newErrors.phone = "Invalid phone number format";
+    if (formData.phone !== undefined) {
+      if (!formData.phone.trim()) {
+        newErrors.phone = "Phone is required";
+      } else if (!phoneRegex.test(unformatPhoneNumber(formData.phone))) {
+        newErrors.phone = "Invalid phone number format";
+      }
     }
 
     if (
@@ -135,21 +167,11 @@ export default function AddSalespersonModal({
     setIsSubmitting(true);
 
     try {
-      await onSubmit(formData);
-
-      // Reset form data
-      setFormData({
-        first_name: "",
-        last_name: "",
-        email: "",
-        phone: "",
-        password: "Default@123",
-        role: "salesperson",
-        twilio_number: "",
-      });
+      await onSubmit(salesperson.id, formData);
+      onClose();
     } catch (error) {
       setApiError(
-        error instanceof Error ? error.message : "Failed to create salesperson"
+        error instanceof Error ? error.message : "Failed to update salesperson"
       );
     } finally {
       setIsSubmitting(false);
@@ -160,10 +182,9 @@ export default function AddSalespersonModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
-          <DialogTitle>Add New Salesperson</DialogTitle>
+          <DialogTitle>Edit Salesperson</DialogTitle>
           <DialogDescription>
-            Add a new member to your sales team. They'll receive login
-            credentials via email.
+            Update the details for this sales team member.
           </DialogDescription>
         </DialogHeader>
 
@@ -240,6 +261,25 @@ export default function AddSalespersonModal({
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select
+              name="status"
+              value={formData.status}
+              onValueChange={(value) =>
+                handleChange({ target: { name: "status", value } })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="twilio_number">
               Twilio Number
               <span className="text-xs text-muted-foreground ml-2">
@@ -266,10 +306,7 @@ export default function AddSalespersonModal({
 
           <Alert>
             <AlertDescription>
-              New salespersons will receive a default password of{" "}
-              <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
-                Default@123
-              </code>
+              Leave fields unchanged to keep their current values.
             </AlertDescription>
           </Alert>
 
@@ -281,10 +318,10 @@ export default function AddSalespersonModal({
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Adding...
+                  Saving...
                 </>
               ) : (
-                "Add Salesperson"
+                "Save Changes"
               )}
             </Button>
           </div>

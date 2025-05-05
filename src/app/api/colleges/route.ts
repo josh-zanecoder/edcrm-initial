@@ -27,8 +27,6 @@ export async function GET(request: NextRequest) {
       .sort({ collegeName: 1 })
       .lean();
 
-    console.log("colleges", colleges);
-
     // Transform the data to a more suitable format for the frontend
     const formattedColleges = colleges.map((college) => ({
       id: (college as any)._id.toString(),
