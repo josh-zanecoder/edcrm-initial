@@ -12,9 +12,8 @@ import {
 } from "@/utils/formatters";
 import { useCallStore } from "@/store/useCallStore";
 import { useDebouncedCallback } from "use-debounce";
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { Plus, Phone, Mail, MapPin, Globe, User, Search } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { useUserStore } from "@/store/useUserStore";
 
@@ -37,9 +36,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Checkbox } from "@/components/ui/checkbox";
 import { MoreHorizontal } from "lucide-react";
-import { ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -146,7 +143,7 @@ export default function ProspectsPage() {
   ) => {
     const loadingToast = toast.loading("Saving prospect...");
     try {
-      const response = await fetch("/api/prospects/create", {
+      const response = await fetch("/api/prospects", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -171,6 +168,34 @@ export default function ProspectsPage() {
       // TODO: Show error notification
       alert(
         error instanceof Error ? error.message : "Failed to create prospect"
+      );
+    }
+  };
+
+  const handleDeleteProspect = async (prospectId: string) => {
+    const loadingToast = toast.loading("Deleting prospect...");
+    try {
+      const response = await fetch(`/api/prospects/${prospectId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.details || "Failed to delete prospect");
+      }
+
+      setProspects((prev) => prev.filter((p) => p.id !== prospectId));
+      toast.success("Prospect deleted successfully", {
+        id: loadingToast,
+      });
+      await fetchColleges();
+    } catch (error) {
+      console.error("Error deleting prospect:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete prospect",
+        {
+          id: loadingToast,
+        }
       );
     }
   };
@@ -458,7 +483,13 @@ export default function ProspectsPage() {
                                   Send Email
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-destructive">
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteProspect(prospect.id);
+                                  }}
+                                >
                                   <Trash2 className="mr-2 h-4 w-4" />
                                   Delete
                                 </DropdownMenuItem>
