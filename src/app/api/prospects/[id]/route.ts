@@ -7,11 +7,11 @@ import { ObjectId } from "mongodb";
 // DELETE /api/prospects/[id]
 export async function DELETE(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectToMongoDB();
-    const { id } = context.params;
+    const { id } = await context.params;
 
     // Validate ObjectId
     if (!ObjectId.isValid(id)) {

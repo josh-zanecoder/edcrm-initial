@@ -2,20 +2,30 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
-import { Prospect } from "@/types/prospect";
+import { useEffect, useCallback } from "react";
 import AddProspectModal from "@/components/salesperson/AddProspectModal";
 import {
   formatAddress,
   formatPhoneNumber,
   formatWebsite,
+  unformatPhoneNumber,
 } from "@/utils/formatters";
 import { useCallStore } from "@/store/useCallStore";
 import { useDebouncedCallback } from "use-debounce";
-import { Plus, Phone, Mail, MapPin, Globe, User, Search } from "lucide-react";
-import { toast } from "sonner";
-import { Progress } from "@/components/ui/progress";
+import {
+  Plus,
+  Phone,
+  Mail,
+  MapPin,
+  Globe,
+  User,
+  Search,
+  MoreHorizontal,
+  Trash2,
+} from "lucide-react";
 import { useUserStore } from "@/store/useUserStore";
+import useProspectsStore from "@/store/useProspectsStore";
+import { Prospect } from "@/types/prospect";
 
 import {
   Table,
@@ -36,7 +46,6 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MoreHorizontal } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -44,26 +53,32 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Trash2 } from "lucide-react";
-
-// Utility function to remove special characters from phone number
-const unformatPhoneNumber = (phone: string) => {
-  return phone.replace(/[^\d+]/g, "");
-};
+import { Progress } from "@/components/ui/progress";
 
 export default function ProspectsPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
-  const [prospects, setProspects] = useState<Prospect[]>([]);
-  const [isLoadingProspects, setIsLoadingProspects] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const { makeCall, isCalling } = useCallStore();
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [progress, setProgress] = useState(0);
   const fetchColleges = useUserStore((state) => state.fetchColleges);
+
+  // Use Zustand store instead of local state
+  const {
+    prospects,
+    isLoadingProspects,
+    isModalOpen,
+    currentPage,
+    totalPages,
+    totalCount,
+    progress,
+    searchQuery,
+    setIsModalOpen,
+    setCurrentPage,
+    setSearchQuery,
+    fetchProspects,
+    addProspect,
+    deleteProspect,
+    startProgressTimer,
+  } = useProspectsStore();
 
   // Define callbacks using useCallback
   const handleRowClick = useCallback(
@@ -75,65 +90,29 @@ export default function ProspectsPage() {
 
   const debouncedSearch = useDebouncedCallback((query: string) => {
     setSearchQuery(query);
-    setCurrentPage(1);
   }, 300);
 
-  // Move all useEffects here
+  // Auth check effect
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "salesperson")) {
       router.push("/login");
     }
   }, [user, isLoading, router]);
 
+  // Fetch prospects when dependencies change
   useEffect(() => {
-    const fetchProspects = async () => {
-      try {
-        setIsLoadingProspects(true);
-        const searchParams = new URLSearchParams({
-          page: currentPage.toString(),
-          limit: "10",
-        });
-
-        if (searchQuery) {
-          searchParams.append("search", searchQuery);
-        }
-
-        const response = await fetch(
-          `/api/prospects?${searchParams.toString()}`
-        );
-        if (!response.ok) {
-          throw new Error("Failed to fetch prospects");
-        }
-        const data = await response.json();
-        setProspects(data.prospects);
-        setTotalPages(data.totalPages);
-        setTotalCount(data.totalCount);
-      } catch (error) {
-        console.error("Error fetching prospects:", error);
-      } finally {
-        setIsLoadingProspects(false);
-      }
-    };
-
     if (user) {
-      fetchProspects();
+      fetchProspects(user.uid);
     }
-  }, [user, currentPage, searchQuery]);
+  }, [user, currentPage, searchQuery, fetchProspects]);
 
+  // Loading progress animation
   useEffect(() => {
     if (isLoading) {
-      const timer = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 95) {
-            clearInterval(timer);
-            return 95;
-          }
-          return prev + 10;
-        });
-      }, 50);
-      return () => clearInterval(timer);
+      const clearTimer = startProgressTimer();
+      return clearTimer;
     }
-  }, [isLoading]);
+  }, [isLoading, startProgressTimer]);
 
   const handleAddProspect = async (
     newProspect: Omit<
@@ -141,63 +120,11 @@ export default function ProspectsPage() {
       "id" | "createdAt" | "updatedAt" | "addedBy" | "assignedTo"
     >
   ) => {
-    const loadingToast = toast.loading("Saving prospect...");
-    try {
-      const response = await fetch("/api/prospects", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newProspect),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.details || "Failed to create prospect");
-      }
-
-      const createdProspect = await response.json();
-      setProspects((prev) => [...prev, createdProspect]);
-      setIsModalOpen(false);
-      toast.success("Prospect added successfully", {
-        id: loadingToast,
-      });
-      await fetchColleges();
-    } catch (error) {
-      console.error("Error creating prospect:", error);
-      // TODO: Show error notification
-      alert(
-        error instanceof Error ? error.message : "Failed to create prospect"
-      );
-    }
+    await addProspect(newProspect, fetchColleges);
   };
 
   const handleDeleteProspect = async (prospectId: string) => {
-    const loadingToast = toast.loading("Deleting prospect...");
-    try {
-      const response = await fetch(`/api/prospects/${prospectId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.details || "Failed to delete prospect");
-      }
-
-      setProspects((prev) => prev.filter((p) => p.id !== prospectId));
-      toast.success("Prospect deleted successfully", {
-        id: loadingToast,
-      });
-      await fetchColleges();
-    } catch (error) {
-      console.error("Error deleting prospect:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to delete prospect",
-        {
-          id: loadingToast,
-        }
-      );
-    }
+    await deleteProspect(prospectId, fetchColleges);
   };
 
   const handleMakeCall = (prospect: Prospect) => {
