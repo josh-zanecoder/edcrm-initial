@@ -14,12 +14,13 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const router = useRouter();
-  const { login, resetPassword } = useAuth();
+  const { login, resetPassword, google } = useAuth();
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   // Add password reset handler
@@ -66,10 +67,14 @@ export default function LoginPage() {
 
     try {
       if (!email || !password) {
-        toast.error("Please enter both email and password");
+        toast.error("Please enter both email and password", {
+          id: loadingToast,
+        });
         return;
       } else if (!emailRegex.test(email)) {
-        toast.error("Please enter a valid email address");
+        toast.error("Please enter a valid email address", {
+          id: loadingToast,
+        });
         return;
       }
       await login({ email, password });
@@ -86,6 +91,39 @@ export default function LoginPage() {
       console.log("Login error:", message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    const loadingToast = toast.loading("Signing in with Google...");
+
+    try {
+      await google();
+      setIsRedirecting(true);
+      toast.success("Successfully signed in!", {
+        id: loadingToast,
+      });
+    } catch (error: any) {
+      // Immediately handle popup closure
+      if (error?.code === "auth/popup-closed-by-user") {
+        toast.dismiss(loadingToast);
+        toast.error("Sign-in with Google cancelled", {
+          duration: 2000,
+        });
+        return;
+      }
+
+      // Handle other errors
+      console.log(error);
+      const message = error.message || getFirebaseAuthErrorMessage(error);
+      toast.error(message, {
+        id: loadingToast,
+        duration: 5000,
+      });
+      console.log("Login error:", message);
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -130,6 +168,8 @@ export default function LoginPage() {
             isResettingPassword={isResettingPassword}
             isForgotPassword={isForgotPassword}
             setIsForgotPassword={setIsForgotPassword}
+            isGoogleLoading={isGoogleLoading}
+            onGoogleSignIn={handleGoogleSignIn}
           />
         </div>
       </div>

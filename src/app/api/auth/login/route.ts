@@ -3,7 +3,7 @@ import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import connectToMongoDB from "@/lib/mongoose";
 import { UserModel } from "@/models/User";
-import { SalesPersonModel } from "@/models/SalesPerson";  // Already defined SalesPerson model
+import { SalesPersonModel } from "@/models/SalesPerson"; // Already defined SalesPerson model
 
 export async function POST(request: Request) {
   try {
@@ -54,7 +54,10 @@ export async function POST(request: Request) {
         firstName: salesperson?.first_name,
         twilioNumber: salesperson?.twilio_number || null,
         lastName: salesperson?.last_name,
-        redirectTo: userRecord.role === "admin" ? "/admin" : "/salesperson",
+        redirectTo:
+          userRecord.role === "admin"
+            ? "/admin/dashboard"
+            : "/salesperson/dashboard",
       };
 
       return NextResponse.json({
