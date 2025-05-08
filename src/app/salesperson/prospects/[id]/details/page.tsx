@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Prospect, CollegeType } from "@/types/prospect";
+import React, { useEffect, useState } from "react";
+import { CollegeType } from "@/types/prospect";
 import { formatAddress, formatPhoneNumber } from "@/utils/formatters";
 import { useRouter } from "next/navigation";
 import {
@@ -14,8 +14,8 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,17 +31,12 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-
-const STATUS_OPTIONS = [
-  "New",
-  "Contacted",
-  "Qualified",
-  "Proposal",
-  "Negotiation",
-  "Closed",
-];
-
-const COLLEGE_TYPES = Object.values(CollegeType);
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
+import useProspectsStore, {
+  STATUS_OPTIONS,
+  COLLEGE_TYPES,
+} from "@/store/useProspectsStore";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -51,152 +46,67 @@ export default function ProspectDetailsPage({ params }: PageProps) {
   const router = useRouter();
   const resolvedParams = React.use(params);
   const id = resolvedParams.id;
-  const [prospect, setProspect] = useState<Prospect | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedProspect, setEditedProspect] = useState<Prospect | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Get state and actions from the store
+  const {
+    currentProspect: prospect,
+    editedProspect,
+    isLoadingDetail: isLoading,
+    isEditing,
+    isSaving,
+    fetchProspectDetail,
+    startEditing,
+    cancelEditing,
+    handleChange,
+    handleCollegeTypeToggle,
+    saveProspect,
+    resetDetailState,
+  } = useProspectsStore();
+
+  // Fetch the prospect details when the component mounts
   useEffect(() => {
-    const fetchProspect = async () => {
-      if (!id) {
-        toast.error("Invalid prospect ID");
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        const response = await fetch(`/api/prospects/${id}/details`, {
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to fetch prospect");
-        }
-
-        const data = await response.json();
-        setProspect(data);
-        setEditedProspect(data);
-      } catch (error) {
-        console.error("Error fetching prospect:", error);
-        toast.error(
-          error instanceof Error ? error.message : "Failed to fetch prospect"
-        );
-        setProspect(null);
-        setEditedProspect(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     if (id) {
-      fetchProspect();
-    }
-  }, [id]);
-
-  const handleEdit = () => {
-    setIsEditing(true);
-    setEditedProspect(prospect);
-  };
-
-  const handleCancel = () => {
-    setIsEditing(false);
-    setEditedProspect(prospect);
-  };
-
-  const handleChange = (field: string, value: string | boolean) => {
-    if (!editedProspect) return;
-
-    if (field === "phone") {
-      const formattedPhone = formatPhoneNumber(value as string);
-      setEditedProspect({
-        ...editedProspect,
-        [field]: formattedPhone,
-      });
-      return;
+      fetchProspectDetail(id);
     }
 
-    if (field.startsWith("address.")) {
-      const addressField = field.split(".")[1];
-      setEditedProspect({
-        ...editedProspect,
-        address: {
-          ...editedProspect.address,
-          [addressField]: value,
-        },
-      });
-    } else {
-      setEditedProspect({
-        ...editedProspect,
-        [field]: value,
-      });
-    }
-  };
+    // Cleanup function to reset the detail state when unmounting
+    return () => {
+      resetDetailState();
+    };
+  }, [id, fetchProspectDetail, resetDetailState]);
 
-  const handleCollegeTypeToggle = (type: CollegeType) => {
-    setEditedProspect((prev) => {
-      if (!prev) return prev;
-      const types = prev.collegeTypes.includes(type)
-        ? prev.collegeTypes.filter((t) => t !== type)
-        : [...prev.collegeTypes, type];
-      return { ...prev, collegeTypes: types };
-    });
-  };
-
-  const isValidPhoneNumber = (phone: string): boolean => {
-    const phoneRegex = /^\(\d{3}\) \d{3}-\d{4}$/;
-    return phoneRegex.test(phone);
-  };
-
+  // Handle saving with error handling
   const handleSave = async () => {
-    if (!prospect || !editedProspect) return;
-    setIsSaving(true);
-    const loadingToast = toast.loading("Saving prospect...");
-
+    setErrorMessage(null);
     try {
-      const response = await fetch(`/api/prospects/${id}/details`, {
-        method: "PUT",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(editedProspect),
-      });
-
-      if (response.status === 401) {
+      await saveProspect(id);
+    } catch (error: any) {
+      // Handle specific error cases
+      if (error instanceof Response && error.status === 401) {
         router.push("/login");
         return;
       }
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update prospect");
+      // Extract detailed error message
+      let message = "Failed to update prospect";
+
+      if (error.response?.data) {
+        const { data } = error.response;
+        if (data.error) message = data.error;
+        else if (data.details) message = data.details;
+        else if (data.message) message = data.message;
+      } else if (error instanceof Error) {
+        message = error.message;
       }
 
-      const updatedProspect = await response.json();
-      setProspect(updatedProspect);
-      setEditedProspect(updatedProspect);
-      setIsEditing(false);
-      toast.success("Prospect updated successfully", {
-        id: loadingToast,
-      });
-    } catch (error) {
-      console.error("Error updating prospect:", error);
-      // toast.error(
-      //   error instanceof Error ? error.message : "Failed to update prospect"
-      // );
-      toast.error("Failed to update prospect", {
-        id: loadingToast,
-      });
-    } finally {
-      setIsSaving(false);
+      setErrorMessage(message);
+      toast.error(message);
     }
   };
+
+  // Clear error when user takes action
+  const clearError = () => setErrorMessage(null);
 
   if (isLoading) {
     return (
@@ -262,6 +172,12 @@ export default function ProspectDetailsPage({ params }: PageProps) {
           <p className="mt-2 text-muted-foreground">
             The requested prospect could not be found.
           </p>
+          <Button
+            onClick={() => router.push("/salesperson/prospects")}
+            className="mt-4"
+          >
+            Back to Prospects
+          </Button>
         </div>
       </div>
     );
@@ -269,6 +185,13 @@ export default function ProspectDetailsPage({ params }: PageProps) {
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+      {errorMessage && (
+        <Alert variant="destructive" className="mb-4" onClick={clearError}>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      )}
+
       <Card className="mb-4 sm:mb-6">
         <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
           <div className="flex items-center gap-3">
@@ -282,7 +205,10 @@ export default function ProspectDetailsPage({ params }: PageProps) {
               <>
                 <Button
                   variant="outline"
-                  onClick={handleCancel}
+                  onClick={() => {
+                    clearError();
+                    cancelEditing();
+                  }}
                   size="sm"
                   className="w-full sm:w-auto"
                 >
@@ -305,13 +231,26 @@ export default function ProspectDetailsPage({ params }: PageProps) {
                 </Button>
               </>
             ) : (
-              <Button
-                onClick={handleEdit}
-                size="sm"
-                className="w-full sm:w-auto"
-              >
-                Edit Details
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push("/salesperson/prospects")}
+                  size="sm"
+                  className="w-full sm:w-auto"
+                >
+                  Back to List
+                </Button>
+                <Button
+                  onClick={() => {
+                    clearError();
+                    startEditing();
+                  }}
+                  size="sm"
+                  className="w-full sm:w-auto"
+                >
+                  Edit Details
+                </Button>
+              </>
             )}
           </div>
         </CardHeader>
@@ -553,6 +492,7 @@ export default function ProspectDetailsPage({ params }: PageProps) {
                         handleCollegeTypeToggle(type as CollegeType)
                       }
                       className="text-xs sm:text-sm"
+                      type="button"
                     >
                       {type}
                     </Button>
@@ -619,6 +559,12 @@ export default function ProspectDetailsPage({ params }: PageProps) {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="mt-6 text-right">
+        <div className="text-xs text-muted-foreground">
+          Last updated: {new Date(prospect.updatedAt).toLocaleString()}
+        </div>
       </div>
     </div>
   );

@@ -1,8 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
-import { Dialog, Transition } from "@headlessui/react";
-import { useState, useEffect } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Prospect, CollegeType } from "@/types/prospect";
 import { formatPhoneNumber } from "@/utils/formatters";
 import { X, Check, Loader2 } from "lucide-react";
@@ -90,18 +88,24 @@ export default function AddProspectModal({
           id: loadingToast,
         }
       );
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Validate that at least one college type is selected
+    if (formData.collegeTypes.length === 0) {
+      toast.error("Please select at least one college type", {
+        id: loadingToast,
+      });
+      setIsSubmitting(false);
       return;
     }
 
     try {
       await onSave(formData);
-      // Reset form to initial state
       setFormData(initialFormState);
-      // Close modal
       onClose();
-      toast.success("Prospect added successfully", {
-        id: loadingToast,
-      });
+      toast.success("Prospect added successfully", { id: loadingToast });
     } catch (error) {
       toast.error("Failed to add prospect. Please try again.", {
         id: loadingToast,
@@ -117,16 +121,12 @@ export default function AddProspectModal({
     const { name, value, type } = e.target;
 
     if (name === "phone") {
-      const formattedPhone = formatPhoneNumber(value);
       setFormData((prev) => ({
         ...prev,
-        [name]: formattedPhone,
+        [name]: formatPhoneNumber(value),
       }));
-      return;
-    }
-
-    if (name.startsWith("address.")) {
-      const field = name.split(".")[1];
+    } else if (name.startsWith("address.")) {
+      const [_, field] = name.split(".");
       setFormData((prev) => ({
         ...prev,
         address: {
@@ -172,6 +172,7 @@ export default function AddProspectModal({
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* College Name */}
             <div className="space-y-2">
               <Label htmlFor="collegeName">College Name</Label>
               <Input
@@ -184,6 +185,7 @@ export default function AddProspectModal({
               />
             </div>
 
+            {/* College Types */}
             <div className="space-y-2">
               <Label>College Types</Label>
               <Popover
@@ -191,12 +193,7 @@ export default function AddProspectModal({
                 onOpenChange={setIsTypeDropdownOpen}
               >
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={isTypeDropdownOpen}
-                    className="w-full justify-between"
-                  >
+                  <Button variant="outline" className="w-full justify-between">
                     <span className="truncate">
                       {formData.collegeTypes.length > 0
                         ? formData.collegeTypes.join(", ")
@@ -243,6 +240,7 @@ export default function AddProspectModal({
               )}
             </div>
 
+            {/* Phone */}
             <div className="space-y-2">
               <Label htmlFor="phone">Phone</Label>
               <Input
@@ -267,6 +265,7 @@ export default function AddProspectModal({
               )}
             </div>
 
+            {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -280,6 +279,7 @@ export default function AddProspectModal({
               />
             </div>
 
+            {/* Address */}
             <div className="space-y-2">
               <Label htmlFor="address.city">City</Label>
               <Input
@@ -291,7 +291,6 @@ export default function AddProspectModal({
                 required
               />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="address.state">State</Label>
               <Input
@@ -303,7 +302,6 @@ export default function AddProspectModal({
                 required
               />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="address.zip">ZIP Code</Label>
               <Input
@@ -316,6 +314,7 @@ export default function AddProspectModal({
               />
             </div>
 
+            {/* County */}
             <div className="space-y-2">
               <Label htmlFor="county">County</Label>
               <Input
@@ -328,6 +327,7 @@ export default function AddProspectModal({
               />
             </div>
 
+            {/* Website */}
             <div className="space-y-2">
               <Label htmlFor="website">Website</Label>
               <Input
@@ -341,6 +341,7 @@ export default function AddProspectModal({
               />
             </div>
 
+            {/* BPPE Approved */}
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="bppeApproved"
@@ -359,13 +360,9 @@ export default function AddProspectModal({
             </div>
           </div>
 
+          {/* Submit & Cancel Buttons */}
           <div className="flex justify-end space-x-2">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              type="button"
-              disabled={isSubmitting}
-            >
+            <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
