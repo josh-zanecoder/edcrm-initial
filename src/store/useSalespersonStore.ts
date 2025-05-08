@@ -6,6 +6,7 @@ import {
   UpdateSalespersonInput,
 } from "@/types/salesperson";
 import { unformatPhoneNumber } from "@/utils/formatters";
+import axios from "axios";
 
 interface SalespersonStore {
   salespersons: Salesperson[];
@@ -17,7 +18,6 @@ interface SalespersonStore {
   deletePersonId: string | null;
   isDeleting: boolean;
 
-  // Actions
   setSalespersons: (salespersons: Salesperson[]) => void;
   setIsLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
@@ -27,7 +27,6 @@ interface SalespersonStore {
   setDeletePersonId: (id: string | null) => void;
   setIsDeleting: (isDeleting: boolean) => void;
 
-  // Async Actions
   fetchSalespersons: () => Promise<void>;
   addSalesperson: (formData: CreateSalespersonInput) => Promise<void>;
   deleteSalesperson: () => Promise<void>;
@@ -36,7 +35,6 @@ interface SalespersonStore {
     formData: UpdateSalespersonInput
   ) => Promise<void>;
 
-  // Computed
   filteredSalespersons: () => Salesperson[];
 }
 
@@ -50,7 +48,6 @@ const useSalespersonStore = create<SalespersonStore>((set, get) => ({
   deletePersonId: null,
   isDeleting: false,
 
-  // Actions
   setSalespersons: (salespersons) => set({ salespersons }),
   setIsLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
@@ -60,58 +57,41 @@ const useSalespersonStore = create<SalespersonStore>((set, get) => ({
   setDeletePersonId: (deletePersonId) => set({ deletePersonId }),
   setIsDeleting: (isDeleting) => set({ isDeleting }),
 
-  // Async Actions
   fetchSalespersons: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await fetch("/api/admin/admin-salespersons");
-      if (!response.ok) {
-        throw new Error("Failed to fetch salespersons");
-      }
-      const data = await response.json();
+      const { data } = await axios.get("/api/admin/admin-salespersons");
       set({ salespersons: Array.isArray(data) ? data : [] });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching salespersons:", error);
-      set({ error: "Failed to load salespersons" });
+      set({ error: error.message || "Failed to load salespersons" });
       set({ salespersons: [] });
     } finally {
       set({ isLoading: false });
     }
   },
 
-  addSalesperson: async (formData: CreateSalespersonInput) => {
+  addSalesperson: async (formData) => {
     const loadingToast = toast.loading("Creating new salesperson...");
-
     try {
-      const response = await fetch("/api/admin/admin-salespersons", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...formData,
-          phone: unformatPhoneNumber(formData.phone),
-          twilio_number: formData.twilio_number
-            ? unformatPhoneNumber(formData.twilio_number)
-            : null,
-        }),
+      const { data } = await axios.post("/api/admin/admin-salespersons", {
+        ...formData,
+        phone: unformatPhoneNumber(formData.phone),
+        twilio_number: formData.twilio_number
+          ? unformatPhoneNumber(formData.twilio_number)
+          : null,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create salesperson");
-      }
 
       toast.success("Salesperson created successfully!", { id: loadingToast });
       set({ isModalOpen: false });
-
       await get().fetchSalespersons();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating salesperson:", error);
       toast.error(
-        error instanceof Error ? error.message : "Failed to create salesperson",
-        { id: loadingToast }
+        error.response?.data?.error || "Failed to create salesperson",
+        {
+          id: loadingToast,
+        }
       );
       throw error;
     }
@@ -128,17 +108,7 @@ const useSalespersonStore = create<SalespersonStore>((set, get) => ({
     );
 
     try {
-      const response = await fetch(
-        `/api/admin/admin-salespersons/${deletePersonId}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to delete salesperson");
-      }
+      await axios.delete(`/api/admin/admin-salespersons/${deletePersonId}`);
 
       set((state) => ({
         salespersons: state.salespersons.filter(
@@ -150,58 +120,45 @@ const useSalespersonStore = create<SalespersonStore>((set, get) => ({
         `${deletedPerson?.first_name} ${deletedPerson?.last_name} has been deleted successfully`,
         { id: loadingToast }
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting salesperson:", error);
       toast.error(
-        error instanceof Error ? error.message : "Failed to delete salesperson",
-        { id: loadingToast }
+        error.response?.data?.error || "Failed to delete salesperson",
+        {
+          id: loadingToast,
+        }
       );
     } finally {
       set({ isDeleting: false, deletePersonId: null });
     }
   },
 
-  updateSalesperson: async (id: string, formData: UpdateSalespersonInput) => {
+  updateSalesperson: async (id, formData) => {
     const loadingToast = toast.loading("Updating salesperson...");
 
     try {
-      const response = await fetch(`/api/admin/admin-salespersons/${id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...formData,
-          phone: formData.phone
-            ? unformatPhoneNumber(formData.phone)
-            : undefined,
-          twilio_number: formData.twilio_number
-            ? unformatPhoneNumber(formData.twilio_number)
-            : undefined,
-        }),
+      await axios.patch(`/api/admin/admin-salespersons/${id}`, {
+        ...formData,
+        phone: formData.phone ? unformatPhoneNumber(formData.phone) : undefined,
+        twilio_number: formData.twilio_number
+          ? unformatPhoneNumber(formData.twilio_number)
+          : undefined,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to update salesperson");
-      }
-
       toast.success("Salesperson updated successfully!", { id: loadingToast });
-
-      // Refresh the salespersons list
       await get().fetchSalespersons();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating salesperson:", error);
       toast.error(
-        error instanceof Error ? error.message : "Failed to update salesperson",
-        { id: loadingToast }
+        error.response?.data?.error || "Failed to update salesperson",
+        {
+          id: loadingToast,
+        }
       );
       throw error;
     }
   },
 
-  // Computed
   filteredSalespersons: () => {
     const { salespersons, searchTerm, statusFilter } = get();
     return salespersons.filter((person) => {
