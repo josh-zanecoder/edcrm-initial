@@ -67,6 +67,24 @@ jobs:
           # Ensure no sensitive data is logged
           echo "Environment variables have been set securely"
 
+      - name: Fetch and setup Google Cloud credentials
+        run: |
+          echo "Fetching Google Cloud credentials from Secret Manager"
+          
+          # Create credentials directory
+          mkdir -p credentials
+          
+          # Fetch credentials from Secret Manager
+          gcloud secrets versions access latest --secret="task-api-credentials" --project=${{ env.PROJECT_ID }} > credentials/task-api-service-account-key.json
+          
+          # Verify the credentials file was created
+          if [ -f "credentials/task-api-service-account-key.json" ]; then
+            echo "Credentials file created successfully"
+          else
+            echo "Failed to create credentials file"
+            exit 1
+          fi
+
       - name: Configure Docker for Artifact Registry
         run: |
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
