@@ -17,10 +17,6 @@ export async function POST(req: Request) {
     const duration = formData.get('CallDuration') as string;
     const from = formData.get('From') as string;
     const to = formData.get('To') as string;
-    const userId = formData.get('UserId') as string;
-    const prospectId = formData.get('ProspectId') as string;
-    const activityId = formData.get('ActivityId') as string;
-    const parentCallSid = formData.get('ParentCallSid') as string;
     
     console.log(`Callssssssssssss ${callSid} status: ${callStatus}`);
     
@@ -45,54 +41,6 @@ export async function POST(req: Request) {
       },
       { merge: true }
     );
-
-    // Get MongoDB client
-    const client = await clientPromise;
-    const mongoDb = client.db();
-
-    // Check if call log already exists in MongoDB
-    const existingCallLog = await mongoDb.collection('calllogs').findOne({ callSid });
-    
-    if (!existingCallLog) {
-      // Create a new activity for the call if activityId is not provided
-      let newActivityId = activityId;
-      
-      if (!newActivityId) {
-        const newActivity = {
-          title: `Call to ${to}`,
-          description: `Outbound call from ${from} to ${to}`,
-          type: 'CALL',
-          status: 'COMPLETED',
-          dueDate: new Date(),
-          completedAt: new Date(),
-          prospectId: new ObjectId(prospectId),
-          addedBy: new ObjectId(userId),
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        
-        const activityResult = await mongoDb.collection('activities').insertOne(newActivity);
-        newActivityId = activityResult.insertedId.toString();
-      }
-      
-      // Create new call log with the activity ID
-      const newCallLog = {
-        to,
-        from,
-        userId: new ObjectId(userId),
-        prospectId: new ObjectId(prospectId),
-        callSid,
-        parentCallSid: parentCallSid || undefined,
-        activityId: new ObjectId(newActivityId),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      
-      await mongoDb.collection('calllogs').insertOne(newCallLog);
-    } else {
-      console.log(`Call log already exists for call ${callSid}`);
-    }
     
     return NextResponse.json({ success: true });
   } catch (err) {

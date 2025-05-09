@@ -1,5 +1,7 @@
+import clientPromise from '@/lib/mongodb';
 import { NextResponse } from 'next/server';
 import twilio from 'twilio';
+import { ObjectId } from 'mongodb';
 
 const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN } = process.env;
 
@@ -9,8 +11,23 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     const to = formData.get('To') as string | null;
     const callerId = formData.get('CallerId') as string | null;
-		console.log('Call from:', callerId)
-    console.log('Received call request to:', to);
+    const firstName = formData.get('FirstName') as string | null;
+    const lastName = formData.get('LastName') as string | null;
+    const prospectId = formData.get('ProspectId') as string;
+    const callType = formData.get('CallType') as string | null;
+    const from = formData.get('From') as string;
+    const callSid = formData.get('CallSid') as string;
+    const userId = formData.get('UserId') as string;
+    const parentCallSid = formData.get('ParentCallSid') as string;
+
+    console.log('Call details:', {
+      to,
+      callerId,
+      firstName,
+      lastName,
+      prospectId,
+      callType
+    });
 
     const twiml = new twilio.twiml.VoiceResponse();
 
@@ -30,18 +47,61 @@ export async function POST(req: Request) {
       recordingStatusCallbackMethod: 'POST', // Use POST method for the callback
     });
     
-    // if (/^\+?[1-9]\d{6,14}$/.test(to)) {
-      // Dial a phone number
-      dial.number({
-        statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
-        // Note: 'in-progress' is a status that Twilio sends but not an event we can subscribe to
-        statusCallback: '/api/twilio/call-status',
-        statusCallbackMethod: 'POST'
-      },to);
-    // } else {
-    //   // Dial a client identity
-    //   dial.client(to);
-    // }
+    // Dial a phone number with custom parameters
+    dial.number({
+      statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+      // Note: 'in-progress' is a status that Twilio sends but not an event we can subscribe to
+      statusCallback: '/api/twilio/call-status',
+      statusCallbackMethod: 'POST'
+    }, to);
+
+     // Get MongoDB client
+     const client = await clientPromise;
+     const mongoDb = client.db();
+     let newActivityId = '';
+ 
+    //  // Check if call log already exists in MongoDB
+     const existingCallLog = await mongoDb.collection('calllogs').findOne({ callSid });
+     
+     if (!existingCallLog) {
+       // Create a new activity for the call if activityId is not provided
+       
+       if (!newActivityId) {
+         const newActivity = {
+           title: `Call to ${to}`,
+           description: `Outbound call from ${from} to ${to}`,
+           type: 'CALL',
+           status: 'COMPLETED',
+           dueDate: new Date(),
+           completedAt: new Date(),
+           prospectId: new ObjectId(prospectId),
+           addedBy: userId,
+           isActive: true,
+           createdAt: new Date(),
+           updatedAt: new Date()
+         };
+         
+         const activityResult = await mongoDb.collection('activities').insertOne(newActivity);
+         newActivityId = activityResult.insertedId.toString();
+       }
+       
+       // Create new call log with the activity ID
+       const newCallLog = {
+         to,
+         from,
+         userId: userId,
+         prospectId: new ObjectId(prospectId),
+         callSid,
+         parentCallSid: parentCallSid || '',
+         activityId: new ObjectId(newActivityId),
+         createdAt: new Date(),
+         updatedAt: new Date()
+       };
+       
+       await mongoDb.collection('calllogs').insertOne(newCallLog);
+     } else {
+       console.log(`Call log already exists for call ${callSid}`);
+     }
 
     return new Response(twiml.toString(), {
       headers: { 'Content-Type': 'text/xml' },
