@@ -13,6 +13,7 @@ import { AuthState, AuthContextType, LoginCredentials } from "@/types/auth";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import axios from "axios";
+import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -82,6 +83,139 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [router]
   );
+
+  const google = useCallback(async () => {
+    try {
+      console.log("Starting Google sign-in process...");
+      setAuthState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+      const provider = new GoogleAuthProvider();
+      console.log("Google provider initialized");
+
+      let result;
+      try {
+        result = await signInWithPopup(auth, provider);
+      } catch (error: any) {
+        if (error?.code === "auth/popup-closed-by-user") {
+          setAuthState({
+            user: null,
+            isLoading: false,
+            error: null,
+          });
+          return Promise.reject({ code: "auth/popup-closed-by-user" });
+        }
+        throw error;
+      }
+
+      console.log("Google popup result:", {
+        email: result.user.email,
+        uid: result.user.uid,
+      });
+
+      try {
+        console.log("Checking user in MongoDB:", result.user.uid);
+        const response = await axios.post(
+          `${window.location.origin}/api/auth/google/check`,
+          {
+            uid: result.user.uid,
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+            validateStatus: (status) => status < 500, // Accept all responses except 500s
+          }
+        );
+        console.log("MongoDB check response:", response.data);
+
+        const checkUserResponse = response.data;
+
+        if (!checkUserResponse?.exists) {
+          await auth.signOut();
+          setAuthState({
+            user: null,
+            isLoading: false,
+            error:
+              checkUserResponse?.error ||
+              "This email is not registered. Please use your registered email address or contact your administrator.",
+          });
+          router.push("/login");
+          return Promise.reject(
+            new Error(
+              checkUserResponse?.error ||
+                "This email is not registered. Please use your registered email address or contact your administrator."
+            )
+          );
+        }
+
+        console.log("Getting Firebase token");
+        const firebaseToken = await result.user.getIdToken();
+        console.log("Firebase token received");
+
+        const userData = {
+          uid: result.user.uid,
+          email: result.user.email,
+          displayName:
+            result.user.displayName || result.user.email?.split("@")[0] || null,
+          firstName: checkUserResponse.firstName || null,
+          lastName: checkUserResponse.lastName || null,
+          token: firebaseToken,
+          role: checkUserResponse.role || "user",
+          id: checkUserResponse.id || null,
+          twilioNumber: checkUserResponse.twilioNumber || null,
+          redirectTo:
+            checkUserResponse.role === "admin"
+              ? "/admin/dashboard"
+              : "/salesperson/dashboard",
+        };
+
+        setAuthState({
+          user: userData,
+          isLoading: false,
+          error: null,
+        });
+
+        document.cookie = `user=${JSON.stringify(
+          userData
+        )}; path=/; max-age=86400; SameSite=Strict`;
+        document.cookie = `token=${firebaseToken}; path=/; max-age=86400; SameSite=Strict`;
+
+        setTimeout(() => {
+          router.push(userData.redirectTo);
+        }, 100);
+      } catch (error) {
+        console.error("Error in MongoDB check or token generation:", error);
+        await auth.signOut();
+        if (axios.isAxiosError(error) && error.response) {
+          setAuthState({
+            user: null,
+            isLoading: false,
+            error: error.response.data.error || "Authentication failed",
+          });
+        } else {
+          setAuthState({
+            user: null,
+            isLoading: false,
+            error: "An unexpected error occurred",
+          });
+        }
+        router.push("/login");
+        return Promise.reject(error);
+      }
+    } catch (error: unknown) {
+      console.error("Google sign-in error:", error);
+      setAuthState({
+        user: null,
+        isLoading: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to login with Google",
+      });
+      router.push("/login");
+      return Promise.reject(error);
+    }
+  }, [router]);
 
   const logout = useCallback(async () => {
     try {
@@ -245,6 +379,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ...authState,
     login,
     logout,
+    google,
     resetPassword,
   };
 
