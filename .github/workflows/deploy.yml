@@ -80,6 +80,16 @@ jobs:
           # Verify the credentials file was created
           if [ -f "credentials/task-api-service-account-key.json" ]; then
             echo "Credentials file created successfully"
+            
+            # Verify credentials content
+            echo "Verifying Task API credentials..."
+            if grep -q "type" "credentials/task-api-service-account-key.json" && grep -q "project_id" "credentials/task-api-service-account-key.json"; then
+              echo "✅ Task API credentials verified - contains required fields"
+              echo "Project ID in credentials: $(grep -o '"project_id": "[^"]*"' credentials/task-api-service-account-key.json | cut -d'"' -f4)"
+            else
+              echo "❌ Task API credentials verification failed - missing required fields"
+              exit 1
+            fi
           else
             echo "Failed to create credentials file"
             exit 1
