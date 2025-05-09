@@ -7,7 +7,7 @@ on:
 
 env:
   PROJECT_ID: poc-1-aima-pmu
-  SERVICE_NAME: edcrm
+  SERVICE_NAME: edcrm-test
   REGION: us-west1
   ARTIFACT_REGISTRY: us-west1-docker.pkg.dev/poc-1-aima-pmu/edcrm
   SERVICE_ACCOUNT: 980800581325-compute@developer.gserviceaccount.com
