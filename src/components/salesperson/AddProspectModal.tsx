@@ -78,25 +78,15 @@ export default function AddProspectModal({
     e.preventDefault();
 
     setIsSubmitting(true);
-    const loadingToast = toast.loading("Saving prospect...");
 
     // Validate phone number before submitting
     if (!isValidPhoneNumber(formData.phone)) {
-      toast.error(
-        "Please enter a valid phone number in format (XXX) XXX-XXXX",
-        {
-          id: loadingToast,
-        }
-      );
       setIsSubmitting(false);
       return;
     }
 
     // Validate that at least one college type is selected
     if (formData.collegeTypes.length === 0) {
-      toast.error("Please select at least one college type", {
-        id: loadingToast,
-      });
       setIsSubmitting(false);
       return;
     }
@@ -105,11 +95,8 @@ export default function AddProspectModal({
       await onSave(formData);
       setFormData(initialFormState);
       onClose();
-      toast.success("Prospect added successfully", { id: loadingToast });
     } catch (error) {
-      toast.error("Failed to add prospect. Please try again.", {
-        id: loadingToast,
-      });
+      console.error("Failed to add prospect:", error);
     } finally {
       setIsSubmitting(false);
     }

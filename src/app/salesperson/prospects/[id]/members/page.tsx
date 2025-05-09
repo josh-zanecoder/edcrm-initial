@@ -3,26 +3,14 @@
 import React, { useState, useEffect } from "react";
 import { Member } from "@/types/member";
 import AddEditMemberModal from "@/components/salesperson/AddEditMemberModal";
-import {
-  Users2,
-  Mail,
-  Phone,
-  Trash2,
-  Pencil,
-  AlertCircle,
-  Loader2,
-} from "lucide-react";
+import { useMembersStore } from "@/store/useMemberStore";
+import { Users2, Mail, Phone, Trash2, Pencil, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -44,98 +32,43 @@ interface PageProps {
 }
 
 export default function MembersPage({ params }: PageProps) {
-  const resolvedParams = React.use(params);
-  const id = resolvedParams.id;
-  const [members, setMembers] = useState<Member[]>([]);
+  const { id } = React.use(params);
+
+  const {
+    members,
+    collegeName,
+    isLoading,
+    isOperationInProgress,
+    error,
+    fetchMembers,
+    deleteMember,
+  } = useMembersStore();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [collegeName, setCollegeName] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
 
-  const fetchMembers = React.useCallback(async () => {
-    try {
-      setError(null);
-      setIsLoading(true);
-
-      // Fetch prospect details first to get the college name
-      const prospectResponse = await fetch(`/api/prospects/${id}/details`);
-      if (!prospectResponse.ok) {
-        throw new Error("Failed to fetch prospect details");
-      }
-      const prospectData = await prospectResponse.json();
-      setCollegeName(prospectData.collegeName);
-
-      // Fetch members
-      const membersResponse = await fetch(`/api/prospects/${id}/members`);
-      if (!membersResponse.ok) {
-        const errorData = await membersResponse.json();
-        throw new Error(errorData.error || "Failed to fetch members");
-      }
-      const membersData = await membersResponse.json();
-      setMembers(membersData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      toast.error("Failed to load members");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [id]);
-
   useEffect(() => {
-    if (id) {
-      fetchMembers();
-    }
+    if (id) fetchMembers(id);
   }, [id, fetchMembers]);
 
-  const handleAddMember = async (
-    member: Omit<Member, "_id" | "createdAt" | "updatedAt" | "addedBy">
-  ) => {
-    try {
-      const response = await fetch(`/api/prospects/${id}/members`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(member),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to add member");
-      }
-      setIsModalOpen(false);
-      await fetchMembers();
-    } catch (err) {
-      console.error("Error adding member:", err);
-      toast.error(err instanceof Error ? err.message : "Failed to add member");
+  // Prevent operation state changes from affecting modal state
+  useEffect(() => {
+    if (isOperationInProgress) {
+      // Block any modal changes when an operation is in progress
+      return;
     }
-  };
+  }, [isOperationInProgress]);
 
   const handleDeleteMember = async (memberId: string) => {
     const loadingToast = toast.loading("Deleting member...");
     try {
-      const response = await fetch(`/api/prospects/${id}/members/${memberId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to delete member");
-      }
-
-      // Optimistically update the UI
-      setMembers((prevMembers) =>
-        prevMembers.filter((member) => member._id !== memberId)
-      );
-      toast.success("Member removed successfully", {
+      await deleteMember(id, memberId);
+      toast.success("Member removed", { id: loadingToast });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to delete member", {
         id: loadingToast,
       });
-    } catch (err) {
-      console.error("Error deleting member:", err);
-      toast.error(
-        err instanceof Error ? err.message : "Failed to delete member"
-      );
-      // Refresh the list to ensure consistency
-      fetchMembers();
     }
   };
 
@@ -144,41 +77,25 @@ export default function MembersPage({ params }: PageProps) {
     setIsEditModalOpen(true);
   };
 
-  const handleEditMember = async (
-    member: Omit<Member, "_id" | "createdAt" | "updatedAt" | "addedBy">
-  ) => {
-    if (!editingMember) return;
-    try {
-      const response = await fetch(
-        `/api/prospects/${id}/members/${editingMember._id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(member),
-        }
-      );
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        console.error("Update failed:", responseData);
-        throw new Error(responseData.error || "Failed to update member");
-      }
-
-      setIsEditModalOpen(false);
-      setEditingMember(null);
-      await fetchMembers();
-    } catch (err) {
-      console.error("Error updating member:", err);
-      toast.error(
-        err instanceof Error ? err.message : "Failed to update member"
-      );
+  // Handle modal close with awareness of operation state
+  const handleAddModalClose = () => {
+    if (!isOperationInProgress) {
+      setIsModalOpen(false);
     }
   };
 
-  if (isLoading) {
+  const handleEditModalClose = () => {
+    if (!isOperationInProgress) {
+      setIsEditModalOpen(false);
+      setEditingMember(null);
+    }
+  };
+
+  if (isLoading && !isOperationInProgress) {
     return (
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        {/* Skeleton loading UI */}
+        {/* (Keeping the same loading UI) */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Skeleton className="h-4 sm:h-5 w-4 sm:w-5" />
@@ -231,7 +148,7 @@ export default function MembersPage({ params }: PageProps) {
         <Button
           variant="outline"
           size="sm"
-          onClick={fetchMembers}
+          onClick={() => fetchMembers(id)}
           className="mt-2"
         >
           Try Again
@@ -253,6 +170,7 @@ export default function MembersPage({ params }: PageProps) {
           onClick={() => setIsModalOpen(true)}
           size="sm"
           className="h-8 sm:h-9"
+          disabled={isOperationInProgress}
         >
           Add Member
         </Button>
@@ -284,34 +202,30 @@ export default function MembersPage({ params }: PageProps) {
                     </Badge>
                   </div>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 flex-shrink-0 p-0 hover:bg-primary/10 hover:text-primary ml-2"
-                    >
-                      <span className="sr-only">Open menu</span>
-                      <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[160px]">
-                    <DropdownMenuItem
-                      onClick={() => handleEditClick(member)}
-                      className="gap-2"
-                    >
-                      <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      <span className="text-xs sm:text-sm">Edit Member</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handleDeleteMember(member._id)}
-                      className="gap-2 text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      <span className="text-xs sm:text-sm">Delete Member</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex items-center space-x-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 rounded-full hover:bg-primary/10"
+                    onClick={() => handleEditClick(member)}
+                    disabled={isOperationInProgress}
+                    title="Edit member"
+                  >
+                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="sr-only">Edit member</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 rounded-full hover:bg-red-500/10"
+                    onClick={() => handleDeleteMember(member._id)}
+                    disabled={isOperationInProgress}
+                    title="Delete member"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-red-500/80" />
+                    <span className="sr-only">Delete member</span>
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-1.5 sm:space-y-2 bg-card p-2.5 sm:p-4">
@@ -327,7 +241,7 @@ export default function MembersPage({ params }: PageProps) {
                 className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary"
               >
                 <Phone className="h-3.5 w-3.5 flex-shrink-0" />
-                {displayPhone(member.phone)}
+                <span>{displayPhone(member.phone)}</span>
               </a>
             </CardContent>
           </Card>
@@ -347,6 +261,7 @@ export default function MembersPage({ params }: PageProps) {
                 onClick={() => setIsModalOpen(true)}
                 size="sm"
                 className="h-9"
+                disabled={isOperationInProgress}
               >
                 Add First Member
               </Button>
@@ -355,23 +270,19 @@ export default function MembersPage({ params }: PageProps) {
         )}
       </div>
 
+      {/* Add Member Modal */}
       <AddEditMemberModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleAddMember}
+        onClose={handleAddModalClose}
         prospectId={id}
-        collegeName={collegeName}
+        mode="add"
       />
 
+      {/* Edit Member Modal */}
       <AddEditMemberModal
         isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setEditingMember(null);
-        }}
-        onSave={handleEditMember}
+        onClose={handleEditModalClose}
         prospectId={id}
-        collegeName={collegeName}
         initialData={editingMember || undefined}
         mode="edit"
       />

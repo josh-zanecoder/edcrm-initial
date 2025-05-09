@@ -63,6 +63,52 @@ export async function PUT(
 
     await connectDB();
 
+    // Check if email already exists in another document
+    if (parsedData.email) {
+      const existingEmailProspect = await Prospect.findOne({
+        email: parsedData.email,
+        _id: { $ne: id }, // Exclude the current prospect
+      });
+
+      if (existingEmailProspect) {
+        return NextResponse.json(
+          {
+            error: "Validation error",
+            details: [
+              {
+                path: ["email"],
+                message: `Email address already exists for college: ${existingEmailProspect.collegeName}`,
+              },
+            ],
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Check if phone already exists in another document
+    if (parsedData.phone) {
+      const existingPhoneProspect = await Prospect.findOne({
+        phone: parsedData.phone,
+        _id: { $ne: id }, // Exclude the current prospect
+      });
+
+      if (existingPhoneProspect) {
+        return NextResponse.json(
+          {
+            error: "Validation error",
+            details: [
+              {
+                path: ["phone"],
+                message: `Phone number already exists for college: ${existingPhoneProspect.collegeName}`,
+              },
+            ],
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const userInfo = {
       id: userData.uid,
       email: userData.email,

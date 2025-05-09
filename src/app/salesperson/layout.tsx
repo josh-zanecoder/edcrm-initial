@@ -1,24 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import SalespersonSidebar from "@/components/salesperson/SalespersonSidebar";
-import SalespersonNavbar from "@/components/salesperson/SalespersonNavbar";
-import { Clock } from "@/components/clock";
-import { ThemeToggle } from "@/components/theme-toggle";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 export default function SalespersonLayout({
@@ -26,8 +9,6 @@ export default function SalespersonLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   return (
     <SidebarProvider>
       <AppSidebar variant="inset" />
