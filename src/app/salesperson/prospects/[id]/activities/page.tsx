@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Activity, ActivityStatus } from "@/types/activity";
 import AddEditActivityModal from "@/components/salesperson/AddEditActivityModal";
 import { useActivitiesStore } from "@/store/useActivityStore";
@@ -59,15 +59,20 @@ interface PageProps {
 
 export default function ActivitiesPage({ params }: PageProps) {
   const { id } = React.use(params);
+  // Track if we've just closed the modal
+  const modalJustClosed = useRef(false);
 
   const {
     activities,
     isLoading,
+    isOperationInProgress,
+    preventModalReopen,
     error,
     fetchActivities,
     addActivity,
     editActivity,
     deleteActivity,
+    resetPreventModalReopen,
   } = useActivitiesStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -80,17 +85,50 @@ export default function ActivitiesPage({ params }: PageProps) {
     if (id) fetchActivities(id);
   }, [id, fetchActivities]);
 
+  // Critical effect to prevent modal reopening
+  useEffect(() => {
+    if (preventModalReopen) {
+      // Ensure modals stay closed when preventModalReopen is true
+      setIsModalOpen(false);
+      setIsEditModalOpen(false);
+
+      // Use a timeout to reset the flag after UI has settled
+      const timer = setTimeout(() => {
+        resetPreventModalReopen();
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [preventModalReopen, resetPreventModalReopen]);
+
   const handleAddActivity = async (
     activityData: Omit<Activity, "_id" | "createdAt" | "updatedAt" | "addedBy">
   ) => {
-    await addActivity(id, activityData);
+    try {
+      // Set local ref to prevent reopening
+      modalJustClosed.current = true;
+
+      await addActivity(id, activityData);
+      // Don't return a boolean
+    } catch (error) {
+      console.error("Error adding activity:", error);
+    }
   };
 
   const handleEditActivity = async (
     activityData: Omit<Activity, "_id" | "createdAt" | "updatedAt" | "addedBy">
   ) => {
     if (!editingActivity) return;
-    await editActivity(id, editingActivity._id, activityData);
+
+    try {
+      // Set local ref to prevent reopening
+      modalJustClosed.current = true;
+
+      await editActivity(id, editingActivity._id, activityData);
+      // Don't return a boolean
+    } catch (error) {
+      console.error("Error editing activity:", error);
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -102,14 +140,35 @@ export default function ActivitiesPage({ params }: PageProps) {
   };
 
   const handleEditClick = (activity: Activity) => {
-    setEditingActivity(activity);
-    setIsEditModalOpen(true);
-  };
-  const handleDeleteClick = (activityId: string) => {
-    setDeleteActivityId(activityId);
+    if (!isOperationInProgress && !preventModalReopen) {
+      setEditingActivity(activity);
+      setIsEditModalOpen(true);
+    }
   };
 
-  if (isLoading) {
+  const handleDeleteClick = (activityId: string) => {
+    if (!isOperationInProgress && !preventModalReopen) {
+      setDeleteActivityId(activityId);
+    }
+  };
+
+  // Clear editing state and ensure modals stay closed
+  const handleModalClose = () => {
+    if (!isOperationInProgress) {
+      setIsModalOpen(false);
+      setIsEditModalOpen(false);
+      setEditingActivity(null);
+    }
+  };
+
+  // Open "Add" modal only if safe to do so
+  const handleAddClick = () => {
+    if (!isOperationInProgress && !preventModalReopen) {
+      setIsModalOpen(true);
+    }
+  };
+
+  if (isLoading && !isOperationInProgress) {
     return (
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
         <Skeleton className="h-10 w-1/3" />
@@ -142,7 +201,12 @@ export default function ActivitiesPage({ params }: PageProps) {
           <Calendar className="h-4 w-4 text-primary" />
           <h1 className="text-lg font-medium">Activities</h1>
         </div>
-        <Button onClick={() => setIsModalOpen(true)}>Add Activity</Button>
+        <Button
+          onClick={handleAddClick}
+          disabled={isOperationInProgress || preventModalReopen}
+        >
+          Add Activity
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -160,6 +224,7 @@ export default function ActivitiesPage({ params }: PageProps) {
                   variant="ghost"
                   size="icon"
                   onClick={() => handleEditClick(activity)}
+                  disabled={isOperationInProgress || preventModalReopen}
                 >
                   <Pencil className="h-4 w-4" />
                 </Button>
@@ -167,6 +232,7 @@ export default function ActivitiesPage({ params }: PageProps) {
                   variant="ghost"
                   size="icon"
                   onClick={() => handleDeleteClick(activity._id)}
+                  disabled={isOperationInProgress || preventModalReopen}
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />
                 </Button>
@@ -192,34 +258,42 @@ export default function ActivitiesPage({ params }: PageProps) {
       {activities.length === 0 && (
         <div className="text-center text-muted-foreground mt-10">
           <p>No activities found.</p>
-          <Button onClick={() => setIsModalOpen(true)} className="mt-2">
+          <Button
+            onClick={handleAddClick}
+            className="mt-2"
+            disabled={isOperationInProgress || preventModalReopen}
+          >
             Add Your First Activity
           </Button>
         </div>
       )}
 
-      <AddEditActivityModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleAddActivity}
-        prospectId={id}
-      />
+      {/* Only render the modal when it's actually needed */}
+      {isModalOpen && !preventModalReopen && (
+        <AddEditActivityModal
+          isOpen={isModalOpen}
+          onClose={handleModalClose}
+          onSave={handleAddActivity}
+          prospectId={id}
+        />
+      )}
 
-      <AddEditActivityModal
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setEditingActivity(null);
-        }}
-        onSave={handleEditActivity}
-        prospectId={id}
-        initialData={editingActivity || undefined}
-        mode="edit"
-      />
+      {isEditModalOpen && !preventModalReopen && (
+        <AddEditActivityModal
+          isOpen={isEditModalOpen}
+          onClose={handleModalClose}
+          onSave={handleEditActivity}
+          prospectId={id}
+          initialData={editingActivity || undefined}
+          mode="edit"
+        />
+      )}
 
       <AlertDialog
         open={!!deleteActivityId}
-        onOpenChange={() => setDeleteActivityId(null)}
+        onOpenChange={(open) =>
+          !isOperationInProgress && !open && setDeleteActivityId(null)
+        }
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -230,10 +304,15 @@ export default function ActivitiesPage({ params }: PageProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel
+              onClick={() => setDeleteActivityId(null)}
+              disabled={isDeleting || isOperationInProgress}
+            >
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
-              disabled={isDeleting}
+              disabled={isDeleting || isOperationInProgress}
               className="bg-destructive text-white"
             >
               {isDeleting ? (
