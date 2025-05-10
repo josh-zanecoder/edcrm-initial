@@ -22,7 +22,16 @@ export function middleware(request: NextRequest) {
     "/api/twilio/transcribe",
     "/api/tasks/create",
   ];
+
+  // Check if the path is public
   if (publicPaths.includes(pathname)) {
+    // If user is authenticated and tries to access login, redirect to dashboard
+    if (pathname === "/login" && userCookie && tokenCookie) {
+      const user = JSON.parse(userCookie.value);
+      const redirectUrl =
+        user.role === "admin" ? "/admin/dashboard" : "/salesperson/dashboard";
+      return NextResponse.redirect(new URL(redirectUrl, request.url));
+    }
     return NextResponse.next();
   }
 
@@ -31,12 +40,6 @@ export function middleware(request: NextRequest) {
     const url = new URL("/login", request.url);
     url.searchParams.set("from", pathname);
     return NextResponse.redirect(url);
-  }
-
-  // If authenticated, prevent access to login page
-  if (pathname === "/login" && userCookie && tokenCookie) {
-    const user = JSON.parse(userCookie.value);
-    return NextResponse.redirect(new URL(user.redirectTo, request.url));
   }
 
   // Role-based access control
