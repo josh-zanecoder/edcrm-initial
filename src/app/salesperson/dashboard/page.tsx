@@ -104,6 +104,16 @@ export default function DashboardPage() {
     return diff < 24 * 60 * 60 * 1000; // less than 24 hours
   };
 
+  // Navigate to the prospect's reminders page when a reminder is clicked
+  const handleReminderClick = (prospectId: string) => {
+    router.push(`/salesperson/prospects/${prospectId}/reminders`);
+  };
+
+  // Navigate to the prospect's details page when an activity is clicked
+  const handleActivityClick = (prospectId: string) => {
+    router.push(`/salesperson/prospects/${prospectId}/activities`);
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
       {isLoading ? (
@@ -252,7 +262,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <CardDescription className="text-sm">
-                      Pending Tasks
+                      Pending Reminders
                     </CardDescription>
                     <CardTitle className="text-xl sm:text-2xl font-semibold tabular-nums">
                       {stats.pendingReminders}
@@ -336,7 +346,8 @@ export default function DashboardPage() {
                     {stats.upcomingReminders.map((reminder) => (
                       <div
                         key={reminder._id}
-                        className="flex items-start justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                        className="flex items-start justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
+                        onClick={() => handleReminderClick(reminder.prospectId)}
                       >
                         <div className="min-w-0 flex-1">
                           <p className="font-medium text-sm sm:text-base truncate">
@@ -391,7 +402,8 @@ export default function DashboardPage() {
                     {stats.recentActivities.map((activity) => (
                       <div
                         key={activity._id}
-                        className="flex items-start justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                        className="flex items-start justify-between p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
+                        onClick={() => handleActivityClick(activity.prospectId)}
                       >
                         <div className="min-w-0 flex-1">
                           <p className="font-medium text-sm sm:text-base truncate">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Activity, ActivityStatus } from "@/types/activity";
 import AddEditActivityModal from "@/components/salesperson/AddEditActivityModal";
 import { useActivitiesStore } from "@/store/useActivityStore";
@@ -13,6 +13,9 @@ import {
   Pencil,
   AlertCircle,
   Loader2,
+  Search,
+  Filter,
+  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -20,6 +23,15 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -80,6 +92,27 @@ export default function ActivitiesPage({ params }: PageProps) {
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [deleteActivityId, setDeleteActivityId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+
+  // Filtered activities based on search and status filter
+  const filteredActivities = useMemo(() => {
+    return activities.filter((activity) => {
+      // Apply search filter (case-insensitive)
+      const searchMatch =
+        searchQuery === "" ||
+        activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        activity.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Apply status filter
+      const statusMatch =
+        statusFilter === "ALL" || activity.status === statusFilter;
+
+      return searchMatch && statusMatch;
+    });
+  }, [activities, searchQuery, statusFilter]);
 
   useEffect(() => {
     if (id) fetchActivities(id);
@@ -168,6 +201,12 @@ export default function ActivitiesPage({ params }: PageProps) {
     }
   };
 
+  // Clear all filters
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("ALL");
+  };
+
   if (isLoading && !isOperationInProgress) {
     return (
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
@@ -209,8 +248,80 @@ export default function ActivitiesPage({ params }: PageProps) {
         </Button>
       </div>
 
+      {/* Search and Filter Section */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div className="relative w-full sm:w-1/2">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search activities..."
+            className="pl-8"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search activities"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1.5 h-7 w-7"
+              onClick={() => setSearchQuery("")}
+              aria-label="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+
+        <div className="flex gap-3 items-center w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="ALL">All Statuses</SelectItem>
+                  <SelectItem value={ActivityStatus.PENDING}>
+                    Pending
+                  </SelectItem>
+                  <SelectItem value={ActivityStatus.IN_PROGRESS}>
+                    In Progress
+                  </SelectItem>
+                  <SelectItem value={ActivityStatus.COMPLETED}>
+                    Completed
+                  </SelectItem>
+                  <SelectItem value={ActivityStatus.CANCELLED}>
+                    Cancelled
+                  </SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {(searchQuery || statusFilter !== "ALL") && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="whitespace-nowrap"
+              onClick={handleClearFilters}
+            >
+              Clear Filters
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Results count */}
+      <div className="text-sm text-muted-foreground">
+        {filteredActivities.length === activities.length
+          ? `Showing all ${activities.length} activities`
+          : `Showing ${filteredActivities.length} of ${activities.length} activities`}
+      </div>
+
+      {/* Activities Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {activities.map((activity) => (
+        {filteredActivities.map((activity) => (
           <Card key={activity._id}>
             <CardHeader className="flex justify-between items-start">
               <div>
@@ -255,16 +366,27 @@ export default function ActivitiesPage({ params }: PageProps) {
         ))}
       </div>
 
-      {activities.length === 0 && (
+      {filteredActivities.length === 0 && (
         <div className="text-center text-muted-foreground mt-10">
-          <p>No activities found.</p>
-          <Button
-            onClick={handleAddClick}
-            className="mt-2"
-            disabled={isOperationInProgress || preventModalReopen}
-          >
-            Add Your First Activity
-          </Button>
+          {activities.length === 0 ? (
+            <>
+              <p>No activities found.</p>
+              <Button
+                onClick={handleAddClick}
+                className="mt-2"
+                disabled={isOperationInProgress || preventModalReopen}
+              >
+                Add Your First Activity
+              </Button>
+            </>
+          ) : (
+            <>
+              <p>No activities match your search criteria.</p>
+              <Button onClick={handleClearFilters} className="mt-2">
+                Clear Filters
+              </Button>
+            </>
+          )}
         </div>
       )}
 
