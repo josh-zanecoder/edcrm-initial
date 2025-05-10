@@ -13,9 +13,25 @@ import { AuthState, AuthContextType, LoginCredentials } from "@/types/auth";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import axios from "axios";
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import {
+  signInWithPopup,
+  GoogleAuthProvider,
+  linkWithCredential,
+  linkWithPopup,
+  fetchSignInMethodsForEmail,
+  EmailAuthProvider,
+  signInWithEmailAndPassword,
+  reauthenticateWithCredential,
+  signInWithRedirect,
+  onAuthStateChanged,
+  getRedirectResult,
+} from "firebase/auth";
+import { toast } from "react-hot-toast";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Store credentials temporarily
+let storedCredentials: { email: string; password: string } | null = null;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>({
@@ -28,6 +44,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (credentials: LoginCredentials) => {
       try {
+        // Store credentials before login
+        storedCredentials = {
+          email: credentials.email,
+          password: credentials.password,
+        };
+
         setAuthState((prev) => ({ ...prev, isLoading: true, error: null }));
 
         const response = await axios.post("/api/auth/login", credentials);
@@ -62,17 +84,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           error: null,
         });
 
-        // Store user data and token in cookies
-        document.cookie = `user=${JSON.stringify(
-          userData
-        )}; path=/; max-age=86400; SameSite=Strict`; // 24 hours
-        document.cookie = `token=${data.user.token}; path=/; max-age=86400; SameSite=Strict`; // 24 hours
+        // Store user data and token in cookies with secure flags
+        const cookieOptions = {
+          path: "/",
+          maxAge: 86400, // 24 hours
+          sameSite: "Strict" as const,
+          secure: process.env.NODE_ENV === "production",
+        };
+
+        document.cookie = `user=${encodeURIComponent(
+          JSON.stringify(userData)
+        )}; path=${cookieOptions.path}; max-age=${
+          cookieOptions.maxAge
+        }; SameSite=${cookieOptions.sameSite}${
+          cookieOptions.secure ? "; Secure" : ""
+        }`;
+        document.cookie = `token=${encodeURIComponent(data.user.token)}; path=${
+          cookieOptions.path
+        }; max-age=${cookieOptions.maxAge}; SameSite=${cookieOptions.sameSite}${
+          cookieOptions.secure ? "; Secure" : ""
+        }`;
 
         // Use setTimeout to ensure state is updated before navigation
         setTimeout(() => {
           router.push(data.user.redirectTo);
         }, 100);
       } catch (error: unknown) {
+        // Clear stored credentials on error
+        storedCredentials = null;
         setAuthState({
           user: null,
           isLoading: false,
@@ -86,124 +125,106 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const google = useCallback(async () => {
     try {
-      console.log("Starting Google sign-in process...");
       setAuthState((prev) => ({ ...prev, isLoading: true, error: null }));
-
       const provider = new GoogleAuthProvider();
-      console.log("Google provider initialized");
 
-      let result;
-      try {
-        result = await signInWithPopup(auth, provider);
-      } catch (error: any) {
-        if (error?.code === "auth/popup-closed-by-user") {
-          setAuthState({
-            user: null,
-            isLoading: false,
-            error: null,
-          });
-          return Promise.reject({ code: "auth/popup-closed-by-user" });
-        }
-        throw error;
-      }
+      // Use popup for Google sign-in
+      const result = await signInWithPopup(auth, provider);
+      console.log("Popup result:", result);
 
-      console.log("Google popup result:", {
-        email: result.user.email,
-        uid: result.user.uid,
-      });
+      if (result) {
+        const user = result.user;
 
-      try {
-        console.log("Checking user in MongoDB:", result.user.uid);
+        console.log("Checking user in MongoDB...");
         const response = await axios.post(
           `${window.location.origin}/api/auth/google/check`,
           {
-            uid: result.user.uid,
+            uid: user.uid,
+            email: user.email,
           },
           {
             headers: {
               "Content-Type": "application/json",
             },
-            validateStatus: (status) => status < 500, // Accept all responses except 500s
+            validateStatus: (status) => status < 500,
           }
         );
         console.log("MongoDB check response:", response.data);
 
-        const checkUserResponse = response.data;
-
-        if (!checkUserResponse?.exists) {
+        const checkUserData = response.data;
+        if (!checkUserData?.exists) {
+          console.log("User not found in MongoDB, signing out...");
           await auth.signOut();
           setAuthState({
             user: null,
             isLoading: false,
             error:
-              checkUserResponse?.error ||
+              checkUserData?.error ||
               "This email is not registered. Please use your registered email address or contact your administrator.",
           });
           router.push("/login");
-          return Promise.reject(
-            new Error(
-              checkUserResponse?.error ||
-                "This email is not registered. Please use your registered email address or contact your administrator."
-            )
-          );
+          return;
         }
 
-        console.log("Getting Firebase token");
-        const firebaseToken = await result.user.getIdToken();
-        console.log("Firebase token received");
-
+        console.log("Getting Firebase token...");
+        const firebaseToken = await user.getIdToken();
         const userData = {
-          uid: result.user.uid,
-          email: result.user.email,
-          displayName:
-            result.user.displayName || result.user.email?.split("@")[0] || null,
-          firstName: checkUserResponse.firstName || null,
-          lastName: checkUserResponse.lastName || null,
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || user.email?.split("@")[0] || null,
+          firstName: checkUserData.firstName || null,
+          lastName: checkUserData.lastName || null,
           token: firebaseToken,
-          role: checkUserResponse.role || "user",
-          id: checkUserResponse.id || null,
-          twilioNumber: checkUserResponse.twilioNumber || null,
+          role: checkUserData.role || "user",
+          id: checkUserData.id || null,
+          twilioNumber: checkUserData.twilioNumber || null,
           redirectTo:
-            checkUserResponse.role === "admin"
+            checkUserData.role === "admin"
               ? "/admin/dashboard"
               : "/salesperson/dashboard",
+          photoURL: user.photoURL || null,
         };
+        console.log("User data prepared:", userData);
 
+        // Set state and cookies first
         setAuthState({
           user: userData,
           isLoading: false,
           error: null,
         });
 
-        document.cookie = `user=${JSON.stringify(
-          userData
-        )}; path=/; max-age=86400; SameSite=Strict`;
-        document.cookie = `token=${firebaseToken}; path=/; max-age=86400; SameSite=Strict`;
+        // Store user data and token in cookies with secure flags
+        const cookieOptions = {
+          path: "/",
+          maxAge: 86400, // 24 hours
+          sameSite: "Strict" as const,
+          secure: process.env.NODE_ENV === "production",
+        };
 
+        document.cookie = `user=${encodeURIComponent(
+          JSON.stringify(userData)
+        )}; path=${cookieOptions.path}; max-age=${
+          cookieOptions.maxAge
+        }; SameSite=${cookieOptions.sameSite}${
+          cookieOptions.secure ? "; Secure" : ""
+        }`;
+        document.cookie = `token=${encodeURIComponent(firebaseToken)}; path=${
+          cookieOptions.path
+        }; max-age=${cookieOptions.maxAge}; SameSite=${cookieOptions.sameSite}${
+          cookieOptions.secure ? "; Secure" : ""
+        }`;
+
+        // Show success toast
+        toast.success("Successfully signed in!");
+
+        console.log("Redirecting to:", userData.redirectTo);
+        // Use setTimeout to ensure state is updated before navigation
         setTimeout(() => {
           router.push(userData.redirectTo);
         }, 100);
-      } catch (error) {
-        console.error("Error in MongoDB check or token generation:", error);
-        await auth.signOut();
-        if (axios.isAxiosError(error) && error.response) {
-          setAuthState({
-            user: null,
-            isLoading: false,
-            error: error.response.data.error || "Authentication failed",
-          });
-        } else {
-          setAuthState({
-            user: null,
-            isLoading: false,
-            error: "An unexpected error occurred",
-          });
-        }
-        router.push("/login");
-        return Promise.reject(error);
       }
-    } catch (error: unknown) {
-      console.error("Google sign-in error:", error);
+    } catch (error: any) {
+      console.error("Error in Google sign-in:", error);
       setAuthState({
         user: null,
         isLoading: false,
@@ -219,10 +240,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      // Clear cookies
-      document.cookie = "user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      await axios.post("/api/auth/logout");
+      // Clear cookies with secure flags
+      const clearCookieOptions = {
+        path: "/",
+        expires: "Thu, 01 Jan 1970 00:00:00 GMT",
+        sameSite: "Strict" as const,
+        secure: process.env.NODE_ENV === "production",
+      };
+
+      document.cookie = `user=; path=${clearCookieOptions.path}; expires=${
+        clearCookieOptions.expires
+      }; SameSite=${clearCookieOptions.sameSite}${
+        clearCookieOptions.secure ? "; Secure" : ""
+      }`;
+      document.cookie = `token=; path=${clearCookieOptions.path}; expires=${
+        clearCookieOptions.expires
+      }; SameSite=${clearCookieOptions.sameSite}${
+        clearCookieOptions.secure ? "; Secure" : ""
+      }`;
       setAuthState({
         user: null,
         isLoading: false,
@@ -257,16 +293,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("Invalid session data");
       }
 
-      const response = await fetch("/api/auth/verify", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ token, user }),
+      const response = await axios.post("/api/auth/verify", {
+        token,
+        user,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      if (response.status !== 200) {
+        const errorData = response.data;
 
         // If token is expired, try to refresh it
         if (errorData.error === "Token has expired") {
@@ -277,19 +310,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             document.cookie = `token=${newToken}; path=/; max-age=86400; SameSite=Strict`;
 
             // Retry verification with new token
-            const retryResponse = await fetch("/api/auth/verify", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ token: newToken, user }),
+            const retryResponse = await axios.post("/api/auth/verify", {
+              token: newToken,
+              user,
             });
 
-            if (!retryResponse.ok) {
+            if (retryResponse.status !== 200) {
               throw new Error("Failed to refresh token");
             }
 
-            const retryData = await retryResponse.json();
+            const retryData = retryResponse.data;
             return retryData.user;
           }
         }
@@ -297,23 +327,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(errorData.error || "Session invalid");
       }
 
-      const data = await response.json();
+      const data = response.data;
 
       if (!data.valid || !data.user) {
         throw new Error("Invalid session data");
       }
 
       // Update cookies with fresh data
-      document.cookie = `user=${JSON.stringify(
-        data.user
-      )}; path=/; max-age=86400; SameSite=Strict`;
-      document.cookie = `token=${data.user.token}; path=/; max-age=86400; SameSite=Strict`;
+      const cookieOptions = {
+        path: "/",
+        maxAge: 86400, // 24 hours
+        sameSite: "Strict" as const,
+        secure: process.env.NODE_ENV === "production",
+      };
+
+      document.cookie = `user=${encodeURIComponent(
+        JSON.stringify(data.user)
+      )}; path=${cookieOptions.path}; max-age=${
+        cookieOptions.maxAge
+      }; SameSite=${cookieOptions.sameSite}${
+        cookieOptions.secure ? "; Secure" : ""
+      }`;
+      document.cookie = `token=${encodeURIComponent(data.user.token)}; path=${
+        cookieOptions.path
+      }; max-age=${cookieOptions.maxAge}; SameSite=${cookieOptions.sameSite}${
+        cookieOptions.secure ? "; Secure" : ""
+      }`;
 
       return data.user;
     } catch (error) {
-      // Clear cookies on error
-      document.cookie = "user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      // Only clear cookies if it's not a token refresh attempt
+      if (!(error instanceof Error && error.message === "Token has expired")) {
+        // Clear cookies with secure flags
+        const clearCookieOptions = {
+          path: "/",
+          expires: "Thu, 01 Jan 1970 00:00:00 GMT",
+          sameSite: "Strict" as const,
+          secure: process.env.NODE_ENV === "production",
+        };
+
+        document.cookie = `user=; path=${clearCookieOptions.path}; expires=${
+          clearCookieOptions.expires
+        }; SameSite=${clearCookieOptions.sameSite}${
+          clearCookieOptions.secure ? "; Secure" : ""
+        }`;
+        document.cookie = `token=; path=${clearCookieOptions.path}; expires=${
+          clearCookieOptions.expires
+        }; SameSite=${clearCookieOptions.sameSite}${
+          clearCookieOptions.secure ? "; Secure" : ""
+        }`;
+      }
       throw error;
     }
   }, []);
@@ -336,7 +399,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isLoading: false,
             error: null,
           });
-          router.push("/login");
+          // Only redirect to login if we're not already on the login page
+          if (!window.location.pathname.includes("/login")) {
+            router.push("/login");
+          }
         }
       } catch (error) {
         if (isMounted) {
@@ -348,7 +414,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 ? error.message
                 : "Failed to restore session",
           });
-          router.push("/login");
+          // Only redirect to login if we're not already on the login page
+          if (!window.location.pathname.includes("/login")) {
+            router.push("/login");
+          }
         }
       }
     };
