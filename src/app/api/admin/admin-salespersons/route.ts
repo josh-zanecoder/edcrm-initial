@@ -7,6 +7,7 @@ import { initializeApp } from "firebase/app";
 import { firebaseConfig } from "@/lib/firebase";
 import { unformatPhoneNumber } from "@/utils/formatters";
 import { UserModel } from "@/models/User";
+import { sendCredentialEmail } from "@/lib/sendCredentialEmail";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -137,6 +138,17 @@ export async function POST(request: Request) {
       });
     } finally {
       await session.endSession();
+    }
+
+    // Send credential email to the new salesperson
+    try {
+      const fullName = `${first_name} ${last_name}`;
+      await sendCredentialEmail(email, fullName, password);
+      console.log(`Credential email sent to ${email}`);
+    } catch (emailError) {
+      console.error("Error sending credential email:", emailError);
+      // We don't want to fail the entire operation if just the email fails
+      // The user is already created, so we'll just log the error
     }
 
     return NextResponse.json(

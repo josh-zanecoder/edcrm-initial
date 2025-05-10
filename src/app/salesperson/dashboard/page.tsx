@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   ExclamationTriangleIcon,
-  ArrowUpIcon,
-  ArrowDownIcon,
   PlusIcon,
   EyeIcon,
 } from "@heroicons/react/24/outline";
@@ -30,6 +28,7 @@ interface Reminder {
   dueDate: string;
   type: string;
   prospectId: string;
+  prospectName: string;
 }
 
 interface Activity {
@@ -38,6 +37,7 @@ interface Activity {
   createdAt: string;
   type: string;
   prospectId: string;
+  prospectName: string;
 }
 
 interface DashboardStats {
@@ -356,6 +356,12 @@ export default function DashboardPage() {
                           <p className="text-xs sm:text-sm text-muted-foreground">
                             {reminder.type}
                           </p>
+                          <p className="text-xs sm:text-sm font-medium text-primary">
+                            <span className="text-muted-foreground">
+                              Prospect:
+                            </span>{" "}
+                            {reminder.prospectName}
+                          </p>
                           <time
                             className="text-xs sm:text-sm text-muted-foreground"
                             dateTime={reminder.dueDate}
@@ -411,6 +417,12 @@ export default function DashboardPage() {
                           </p>
                           <p className="text-xs sm:text-sm text-muted-foreground">
                             {activity.type}
+                          </p>
+                          <p className="text-xs sm:text-sm font-medium text-primary">
+                            <span className="text-muted-foreground">
+                              Prospect:
+                            </span>{" "}
+                            {activity.prospectName}
                           </p>
                           <time
                             className="text-xs sm:text-sm text-muted-foreground"

@@ -30,10 +30,21 @@ export async function GET(request: NextRequest) {
     // Get all prospect IDs assigned to this user
     const assignedProspects = await Prospect.find(
       { "assignedTo._id": userData.id },
-      { _id: 1 }
+      { _id: 1, collegeName: 1 }
     ).lean();
 
     const prospectIds = assignedProspects.map((p) => p._id);
+
+    // Create a map of prospect IDs to college names for quick lookup
+    const prospectMap: Record<string, string> = assignedProspects.reduce(
+      (map, prospect) => {
+        if (prospect._id) {
+          map[prospect._id.toString()] = prospect.collegeName;
+        }
+        return map;
+      },
+      {} as Record<string, string>
+    );
 
     // Calculate date range for 3-day window
     const now = new Date();
@@ -69,18 +80,31 @@ export async function GET(request: NextRequest) {
           createdAt: { $gte: threeDaysAgo }, // Created within the last 3 days
           isActive: true,
         })
-          .select("_id title createdAt type prospectId")
+          .select("_id title createdAt type prospectId transcription")
           .sort({ createdAt: -1 })
           .limit(5)
           .lean(),
       ]);
 
+    // Add prospect college name to each reminder and activity
+    const enhancedReminders = upcomingReminders.map((reminder) => ({
+      ...reminder,
+      prospectName:
+        prospectMap[reminder.prospectId.toString()] || "Unknown College",
+    }));
+
+    const enhancedActivities = recentActivities.map((activity) => ({
+      ...activity,
+      prospectName:
+        prospectMap[activity.prospectId.toString()] || "Unknown College",
+    }));
+
     return NextResponse.json({
       stats: {
         totalProspects: assignedProspects.length,
         pendingReminders,
-        upcomingReminders,
-        recentActivities,
+        upcomingReminders: enhancedReminders,
+        recentActivities: enhancedActivities,
       },
     });
   } catch (error) {
