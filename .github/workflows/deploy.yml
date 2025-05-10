@@ -11,7 +11,7 @@ env:
   REGION: us-west1
   ARTIFACT_REGISTRY: us-west1-docker.pkg.dev/poc-1-aima-pmu/edcrm
   SERVICE_ACCOUNT: 980800581325-compute@developer.gserviceaccount.com
-    
+
 jobs:
   deploy:
     name: EDCRM Deployment
@@ -27,8 +27,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
-          cache: 'npm'
+          node-version: "18"
+          cache: "npm"
 
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -44,14 +44,14 @@ jobs:
         id: secrets
         run: |
           echo "Fetching environment variables from Secret Manager"
-          
+
           # Fetch all environment variables from the single secret
           ENV_JSON=$(gcloud secrets versions access latest --secret="edcrm-secrets-nxt" --project=${{ env.PROJECT_ID }})
-          
+
           # Create .env file from JSON
           echo "Creating .env file"
           echo "$ENV_JSON" | jq -r 'to_entries | .[] | .key + "=" + (.value | tostring)' > .env
-          
+
           # Set all environment variables for build process
           echo "Setting environment variables for build"
           while IFS='=' read -r key value; do
@@ -63,7 +63,7 @@ jobs:
             echo "$key=$value" >> $GITHUB_ENV
             echo "Added masked build variable: $key"
           done < .env
-          
+
           # Ensure no sensitive data is logged
           echo "Environment variables have been set securely"
 
@@ -98,13 +98,13 @@ jobs:
             escaped_value=$(printf '%s\n' "$value" | sed 's/"/\\"/g')
             BUILD_ARGS+=(--build-arg "$key=$escaped_value")
           done < .env
-      
+
           echo "Building Docker image with args: ${BUILD_ARGS[*]}"
-          
+
           docker build "${BUILD_ARGS[@]}" -t ${{ env.ARTIFACT_REGISTRY }}/${{ env.SERVICE_NAME }}:${{ steps.timestamp.outputs.timestamp }} --no-cache .
-          
+
           docker push ${{ env.ARTIFACT_REGISTRY }}/${{ env.SERVICE_NAME }}:${{ steps.timestamp.outputs.timestamp }}
-      
+
       - name: Get current traffic allocation
         id: get-traffic
         run: |
@@ -148,10 +148,10 @@ jobs:
             
             ENV_VARS="$ENV_VARS,${key}=${escaped_value}"
           done < .env
-          
+
           # Remove leading comma and format for gcloud command
           ENV_VARS=${ENV_VARS#,}
-          
+
           # Check if service exists
           if gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} 2>/dev/null; then
             # Service exists - deploy new revision with no traffic
@@ -171,6 +171,7 @@ jobs:
               --concurrency=80 \
               --execution-environment=gen2 \
               --set-env-vars="$ENV_VARS" \
+              --set-secrets="SERVICE_ACCOUNT_JSON=task-api-credentials:latest" \
               --tag ${{ steps.get-traffic.outputs.next }}
           else
             # Service doesn't exist - create new service
@@ -189,6 +190,7 @@ jobs:
               --concurrency=80 \
               --execution-environment=gen2 \
               --set-env-vars="$ENV_VARS" \
+              --set-secrets="SERVICE_ACCOUNT_JSON=task-api-credentials:latest"
               --tag ${{ steps.get-traffic.outputs.next }}
           fi
 
@@ -200,20 +202,20 @@ jobs:
             --region ${{ env.REGION }} \
             --format="value(status.url)")
           HEALTH_CHECK_URL="${SERVICE_URL}/api/health"
-          
+
           echo "Starting health check for service: ${{ env.SERVICE_NAME }}"
           echo "Service URL: $SERVICE_URL"
           echo "Health check URL: $HEALTH_CHECK_URL"
-          
+
           # Initial wait for service to initialize
           echo "Waiting 10 seconds for service to initialize..."
           sleep 10
-          
+
           # Health check with retries
           MAX_RETRIES=3
           RETRY_COUNT=0
           SUCCESS=false
-          
+
           until [ $RETRY_COUNT -ge $MAX_RETRIES ] || [ "$SUCCESS" = true ]; do
             RETRY_COUNT=$((RETRY_COUNT + 1))
             echo "Attempt $RETRY_COUNT of $MAX_RETRIES"
@@ -240,7 +242,7 @@ jobs:
               fi
             fi
           done
-          
+
           # Set output based on success
           if [ "$SUCCESS" = true ]; then
             echo "All health checks passed successfully"
@@ -272,7 +274,7 @@ jobs:
             --format="value(name)" \
             --sort-by=~creationTimestamp \
             --limit=2 | tail -n 1)
-          
+
           if [ -n "$PREVIOUS_REVISION" ]; then
             echo "Rolling back to revision: $PREVIOUS_REVISION"
             gcloud run services update-traffic ${{ env.SERVICE_NAME }} \
