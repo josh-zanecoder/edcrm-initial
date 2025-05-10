@@ -6,10 +6,18 @@ import { createTranscriptionTask } from '@/lib/cloud-tasks';
 export async function POST(req: Request) {
   try {
     const { recordingUrl, callSid } = await req.json();
-    const response = await createTranscriptionTask(recordingUrl, callSid);
-    return NextResponse.json({ success: true, taskName: response.name });
+
+    if (!recordingUrl || !callSid) {
+      return NextResponse.json(
+        { error: 'Missing required parameters' },
+        { status: 400 }
+      );
+    }
+
+    const result = await createTranscriptionTask(recordingUrl, callSid);
+    return NextResponse.json(result);
   } catch (error) {
-    console.error('Error creating Cloud Task:', error);
+    console.error('Error in task creation:', error);
     return NextResponse.json(
       { error: 'Failed to create task' },
       { status: 500 }
