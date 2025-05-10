@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Reminder, ReminderType, ReminderStatus } from "@/types/reminder";
-import { X, Loader2, CalendarIcon } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -23,14 +23,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 
 interface AddReminderModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (
     reminder: Omit<Reminder, "_id" | "createdAt" | "updatedAt" | "addedBy">
-  ) => void;
+  ) => Promise<boolean>;
   prospectId: string;
   initialData?: Partial<Reminder>;
   mode?: "add" | "edit";
@@ -65,26 +64,34 @@ export default function AddReminderModal({
     isActive: true,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
+  // Only reset form when the modal is actually opened
   useEffect(() => {
-    if (initialData) {
-      setFormData({
-        title: initialData.title || "",
-        description: initialData.description || "",
-        type: initialData.type || ReminderType.EMAIL,
-        status: initialData.status || ReminderStatus.PENDING,
-        dueDate: initialData.dueDate ? new Date(initialData.dueDate) : null,
-        isActive: initialData.isActive ?? true,
-      });
-    } else {
-      setFormData({
-        title: "",
-        description: "",
-        type: ReminderType.EMAIL,
-        status: ReminderStatus.PENDING,
-        dueDate: null,
-        isActive: true,
-      });
+    if (isOpen) {
+      setHasSubmitted(false);
+
+      if (initialData) {
+        setFormData({
+          title: initialData.title || "",
+          description: initialData.description || "",
+          type: initialData.type || ReminderType.EMAIL,
+          status: initialData.status || ReminderStatus.PENDING,
+          dueDate: initialData.dueDate
+            ? new Date(initialData.dueDate)
+            : new Date(),
+          isActive: initialData.isActive ?? true,
+        });
+      } else {
+        setFormData({
+          title: "",
+          description: "",
+          type: ReminderType.EMAIL,
+          status: ReminderStatus.PENDING,
+          dueDate: new Date(),
+          isActive: true,
+        });
+      }
     }
   }, [initialData, isOpen]);
 
@@ -92,33 +99,44 @@ export default function AddReminderModal({
     e.preventDefault();
 
     setIsLoading(true);
+    setHasSubmitted(true);
     const loadingToast = toast.loading("Saving reminder...");
 
     try {
-      await onSave({
+      // Call the save function and wait for result
+      const success = await onSave({
         ...formData,
         dueDate: formData.dueDate ?? new Date(),
         prospectId,
       });
-      toast.success(
-        mode === "edit"
-          ? "Reminder updated successfully"
-          : "Reminder added successfully",
-        {
-          id: loadingToast,
-        }
-      );
-      onClose();
+
+      // Show appropriate toast based on result
+      if (success) {
+        toast.success(
+          mode === "edit"
+            ? "Reminder updated successfully"
+            : "Reminder added successfully",
+          { id: loadingToast }
+        );
+
+        // Only close the modal if successful
+        onClose();
+      } else {
+        toast.error(
+          mode === "edit"
+            ? "Failed to update reminder"
+            : "Failed to add reminder",
+          { id: loadingToast }
+        );
+      }
     } catch (error) {
+      console.error("Error saving reminder:", error);
       toast.error(
         mode === "edit"
           ? "Failed to update reminder"
           : "Failed to add reminder",
-        {
-          id: loadingToast,
-        }
+        { id: loadingToast }
       );
-      console.error("Error saving reminder:", error);
     } finally {
       setIsLoading(false);
     }
@@ -131,8 +149,21 @@ export default function AddReminderModal({
     }));
   };
 
+  // Custom handler for modal open change
+  const handleOpenChange = (open: boolean) => {
+    if (!open && !isLoading && !hasSubmitted) {
+      onClose();
+    }
+  };
+
+  // Return null if modal shouldn't be open
+  // This is an additional safeguard against unwanted rendering
+  if (!isOpen) {
+    return null;
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
@@ -228,19 +259,21 @@ export default function AddReminderModal({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm sm:text-base">Due Date</Label>
+              <Label className="text-sm sm:text-base">Due Date and Time</Label>
               <DatePicker
                 selected={formData.dueDate}
                 onChange={(date) =>
                   setFormData((prev) => ({ ...prev, dueDate: date }))
                 }
                 minDate={new Date()}
-                placeholderText="Pick a date"
-                className="w-full text-sm sm:text-base rounded-md border border-input bg-transparent px-3 py-1 shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                placeholderText="Pick a date and time"
+                showTimeSelect
+                timeIntervals={15}
+                timeCaption="Time"
+                dateFormat="Pp"
                 disabled={isLoading}
-                showPopperArrow={false}
-                popperPlacement="bottom-start"
-                customInput={<ReadOnlyInput />}
+                className="w-full text-sm sm:text-base rounded-md border border-input bg-transparent px-3 py-1 shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                popperPlacement="top-start"
               />
             </div>
           </div>

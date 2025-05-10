@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await connectToMongoDB(); // ✅ use the same connection
+    await connectToMongoDB();
 
     const cookieStore = await cookies();
     const userCookie = cookieStore.get("user");
@@ -148,6 +148,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Phone number must be at least 10 digits" },
         { status: 400 }
+      );
+    }
+
+    // 🔍 Check for existing email or phone
+    const existingProspect = await Prospect.findOne({
+      $or: [{ email: data.email }, { phone: data.phone }],
+    });
+
+    if (existingProspect) {
+      return NextResponse.json(
+        { error: "A prospect with this email or phone number already exists." },
+        { status: 409 }
       );
     }
 

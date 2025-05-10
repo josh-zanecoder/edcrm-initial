@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Activity, ActivityType, ActivityStatus } from "@/types/activity";
-import { X, Loader2, CalendarIcon } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -24,11 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 interface AddActivityModalProps {
@@ -71,35 +66,43 @@ export default function AddActivityModal({
     isActive: true,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
+  // Only reset form data when the modal is opened, not when closing
   useEffect(() => {
-    if (initialData) {
-      setFormData({
-        title: initialData.title || "",
-        description: initialData.description || "",
-        type: initialData.type || ActivityType.TASK,
-        status: initialData.status || ActivityStatus.PENDING,
-        dueDate: initialData.dueDate
-          ? new Date(initialData.dueDate)
-          : new Date(),
-        isActive: initialData.isActive ?? true,
-      });
-    } else {
-      setFormData({
-        title: "",
-        description: "",
-        type: ActivityType.TASK,
-        status: ActivityStatus.PENDING,
-        dueDate: new Date(),
-        isActive: true,
-      });
+    if (isOpen) {
+      setHasSubmitted(false);
+
+      if (initialData) {
+        setFormData({
+          title: initialData.title || "",
+          description: initialData.description || "",
+          type: initialData.type || ActivityType.TASK,
+          status: initialData.status || ActivityStatus.PENDING,
+          dueDate: initialData.dueDate
+            ? new Date(initialData.dueDate)
+            : new Date(),
+          isActive: initialData.isActive ?? true,
+        });
+      } else {
+        setFormData({
+          title: "",
+          description: "",
+          type: ActivityType.TASK,
+          status: ActivityStatus.PENDING,
+          dueDate: new Date(),
+          isActive: true,
+        });
+      }
     }
   }, [initialData, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setHasSubmitted(true); // Set submitted flag to prevent unwanted modal state changes
     const loadingToast = toast.loading("Saving activity...");
+
     try {
       await onSave({
         ...formData,
@@ -114,6 +117,7 @@ export default function AddActivityModal({
           id: loadingToast,
         }
       );
+      // Close modal only after successful operation
       onClose();
     } catch (error) {
       toast.error(
@@ -127,6 +131,7 @@ export default function AddActivityModal({
       console.error("Error saving activity:", error);
     } finally {
       setIsLoading(false);
+      // Don't reset hasSubmitted here - only reset when the modal is reopened
     }
   };
 
@@ -137,8 +142,21 @@ export default function AddActivityModal({
     }));
   };
 
+  // Prevent closing during submission
+  const handleOpenChange = (open: boolean) => {
+    if (!hasSubmitted && !isLoading) {
+      onClose();
+    }
+  };
+
+  // Return null if modal shouldn't be open
+  // This is an additional safeguard against unwanted rendering
+  if (!isOpen) {
+    return null;
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg sm:text-xl font-semibold">
@@ -237,19 +255,21 @@ export default function AddActivityModal({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm sm:text-base">Due Date</Label>
+              <Label className="text-sm sm:text-base">Due Date and Time</Label>
               <DatePicker
                 selected={formData.dueDate}
                 onChange={(date) =>
                   setFormData((prev) => ({ ...prev, dueDate: date }))
                 }
                 minDate={new Date()}
-                placeholderText="Pick a date"
-                className="w-full text-sm sm:text-base rounded-md border border-input bg-transparent px-3 py-1 shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                placeholderText="Pick a date and time"
+                showTimeSelect
+                timeIntervals={15}
+                timeCaption="Time"
+                dateFormat="Pp"
                 disabled={isLoading}
-                showPopperArrow={false}
-                popperPlacement="bottom-start"
-                customInput={<ReadOnlyInput />}
+                className="w-full text-sm sm:text-base rounded-md border border-input bg-transparent px-3 py-1 shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                popperPlacement="top-start"
               />
             </div>
           </div>

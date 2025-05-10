@@ -75,7 +75,7 @@ export default function ProspectLayout({ children, params }: LayoutProps) {
                 <TabsTrigger
                   key={tab.name}
                   value={tab.href}
-                  className="relative h-[38px] sm:h-[42px] rounded-md sm:rounded-none border sm:border-0 border-border sm:border-b-2 border-transparent data-[state=active]:border-primary bg-transparent px-2 sm:px-4 text-sm sm:text-base font-medium data-[state=active]:bg-primary/5 sm:data-[state=active]:bg-transparent data-[state=active]:border-primary sm:data-[state=active]:border-primary data-[state=active]:shadow-none sm:flex-1 text-center"
+                  className="cursor-pointer relative h-[38px] sm:h-[42px] rounded-md sm:rounded-none border sm:border-0 border-border sm:border-b-2 border-transparent data-[state=active]:border-primary bg-transparent px-2 sm:px-4 text-sm sm:text-base font-medium data-[state=active]:bg-primary/5 sm:data-[state=active]:bg-transparent data-[state=active]:border-primary sm:data-[state=active]:border-primary data-[state=active]:shadow-none sm:flex-1 text-center"
                 >
                   {tab.name}
                 </TabsTrigger>

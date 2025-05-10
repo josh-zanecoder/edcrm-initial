@@ -5,6 +5,7 @@ import { Member, MemberRole } from "@/types/member";
 import { formatPhoneNumber } from "@/utils/formatters";
 import { X, Loader2, Mail, Phone, User } from "lucide-react";
 import { toast } from "sonner";
+import { useMembersStore } from "@/store/useMemberStore";
 
 import {
   Dialog,
@@ -28,11 +29,7 @@ import { cn } from "@/lib/utils";
 interface AddMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (
-    member: Omit<Member, "_id" | "createdAt" | "updatedAt" | "addedBy">
-  ) => Promise<void>;
   prospectId: string;
-  collegeName: string;
   initialData?: Partial<Member>;
   mode?: "add" | "edit";
 }
@@ -40,12 +37,12 @@ interface AddMemberModalProps {
 export default function AddEditMemberModal({
   isOpen,
   onClose,
-  onSave,
   prospectId,
-  collegeName,
   initialData,
   mode = "add",
 }: AddMemberModalProps) {
+  // Get store actions and state
+  const { collegeName, addMember, updateMember } = useMembersStore();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -55,26 +52,31 @@ export default function AddEditMemberModal({
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<typeof formData>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (initialData) {
-      setFormData({
-        firstName: initialData.firstName || "",
-        lastName: initialData.lastName || "",
-        phone: initialData.phone ? formatPhoneNumber(initialData.phone) : "",
-        email: initialData.email || "",
-        role: initialData.role || MemberRole.Other,
-      });
-    } else {
-      setFormData({
-        firstName: "",
-        lastName: "",
-        phone: "",
-        email: "",
-        role: MemberRole.Other,
-      });
+    // Only reset form data when modal is opened
+    if (isOpen) {
+      if (initialData) {
+        setFormData({
+          firstName: initialData.firstName || "",
+          lastName: initialData.lastName || "",
+          phone: initialData.phone ? formatPhoneNumber(initialData.phone) : "",
+          email: initialData.email || "",
+          role: initialData.role || MemberRole.Other,
+        });
+      } else {
+        setFormData({
+          firstName: "",
+          lastName: "",
+          phone: "",
+          email: "",
+          role: MemberRole.Other,
+        });
+      }
+      setErrors({});
+      setIsSubmitting(false);
     }
-    setErrors({});
   }, [initialData, isOpen]);
 
   const validateForm = () => {
@@ -111,33 +113,43 @@ export default function AddEditMemberModal({
       return;
     }
 
+    // Set submitting state to true to prevent unwanted modal closing/reopening
+    setIsSubmitting(true);
     setIsLoading(true);
+
     const loadingToast = toast.loading("Saving member...");
     try {
       const unformattedPhone = formData.phone.replace(/\D/g, "");
-      await onSave({
+      const memberData = {
         ...formData,
         phone: unformattedPhone,
         prospectId,
         collegeName,
-      });
+      };
+
+      if (mode === "edit" && initialData?._id) {
+        await updateMember(prospectId, initialData._id, memberData);
+      } else {
+        await addMember(prospectId, memberData);
+      }
+
       toast.success(
         mode === "edit"
           ? "Member updated successfully"
           : "Member added successfully",
-        {
-          id: loadingToast,
-        }
+        { id: loadingToast }
       );
+
+      // Only close the modal after operations are complete
       onClose();
     } catch (error) {
       toast.error(
         mode === "edit" ? "Failed to update member" : "Failed to add member",
-        {
-          id: loadingToast,
-        }
+        { id: loadingToast }
       );
       console.error("Error saving member:", error);
+      // Reset submitting state on error
+      setIsSubmitting(false);
     } finally {
       setIsLoading(false);
     }
@@ -162,8 +174,15 @@ export default function AddEditMemberModal({
     }
   };
 
+  // If form is submitting, don't let the Dialog close on escape or overlay click
+  const handleOpenChange = (open: boolean) => {
+    if (!isSubmitting && !isLoading) {
+      onClose();
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
@@ -192,7 +211,7 @@ export default function AddEditMemberModal({
                     errors.firstName && "border-destructive"
                   )}
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || isSubmitting}
                 />
               </div>
               {errors.firstName && (
@@ -213,7 +232,7 @@ export default function AddEditMemberModal({
                     errors.lastName && "border-destructive"
                   )}
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || isSubmitting}
                 />
               </div>
               {errors.lastName && (
@@ -234,7 +253,7 @@ export default function AddEditMemberModal({
                 placeholder="john@example.com"
                 className={cn("pl-9", errors.email && "border-destructive")}
                 required
-                disabled={isLoading}
+                disabled={isLoading || isSubmitting}
               />
             </div>
             {errors.email && (
@@ -254,7 +273,7 @@ export default function AddEditMemberModal({
                 placeholder="(XXX) XXX-XXXX"
                 className={cn("pl-9", errors.phone && "border-destructive")}
                 required
-                disabled={isLoading}
+                disabled={isLoading || isSubmitting}
               />
             </div>
             {errors.phone && (
@@ -267,7 +286,7 @@ export default function AddEditMemberModal({
             <Select
               value={formData.role}
               onValueChange={(value) => handleChange("role", value)}
-              disabled={isLoading}
+              disabled={isLoading || isSubmitting}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select a role" />
@@ -287,11 +306,11 @@ export default function AddEditMemberModal({
               variant="outline"
               type="button"
               onClick={onClose}
-              disabled={isLoading}
+              disabled={isLoading || isSubmitting}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading || isSubmitting}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
